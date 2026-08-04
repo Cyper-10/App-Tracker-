@@ -1,52 +1,150 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
-// Custom Cypher Map Icon
-const cypherMarkerIcon = new L.Icon({
+// ----------------------------------------------------
+// RETRO 8-BIT / PIXEL ART ICONS
+// ----------------------------------------------------
+
+// Restored 8-Bit Cypher Icon for Live Device Signal
+const liveDevice8BitIcon = new L.Icon({
   iconUrl: '/cypher.png',
   iconSize: [40, 40],
   iconAnchor: [20, 20],
   popupAnchor: [0, -20],
 });
 
-// Helper component to handle smooth map movement on button click
+// 8-Bit Cypher Icon for Searched & Reported Sightings
+const cypher8BitIcon = new L.Icon({
+  iconUrl: '/cypher.png',
+  iconSize: [40, 40],
+  iconAnchor: [20, 20],
+  popupAnchor: [0, -20],
+});
+
+// Helper component to smoothly fly map view
 function MapFlyTo({ coords }) {
   const map = useMap();
-  if (coords) {
-    map.flyTo(coords, 6, { duration: 1.5 });
-  }
+  useEffect(() => {
+    if (coords) {
+      map.flyTo(coords, 10, { duration: 1.5 });
+    }
+  }, [coords, map]);
   return null;
 }
 
 export default function Map() {
-  // Initial Sightings Data
-  const [sightings, setSightings] = useState([
-    { id: 1, type: 'Trapwire', lat: 10.7202, lng: 122.5621, location: 'Iloilo City', note: 'Trapwire active near central hub' },
-    { id: 2, type: 'Spy Cam', lat: 35.6762, lng: 139.6503, location: 'Tokyo', note: 'Neural theft stream detected' },
-    { id: 3, type: 'Cyber Ping', lat: 52.5200, lng: 13.4050, location: 'Berlin', note: 'Cipher connection active' },
-  ]);
+  // Live Device Tracking State
+  const [deviceCoords, setDeviceCoords] = useState(null);
 
-  // Modal & View States
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // Sightings state initialized EMPTY
+  const [sightings, setSightings] = useState([]);
+
+  // Search & Navigation States
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
   const [targetCoords, setTargetCoords] = useState(null);
-  const [newSighting, setNewSighting] = useState({
-    type: 'Trapwire',
-    location: '',
-    lat: '',
-    lng: '',
-    note: ''
-  });
 
-  // Add new sighting handler
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newSighting, setNewSighting] = useState({ type: 'Trapwire', location: '', lat: '', lng: '', note: '' });
+
+  // Strictly define world bounds to prevent repetition/stretching
+  const outerWorldBounds = [
+    [-90, -180],
+    [90, 180],
+  ];
+
+  // 1. Continuously Track Device Live Location
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        setDeviceCoords([pos.coords.latitude, pos.coords.longitude]);
+      },
+      (err) => console.warn('Geo Error:', err),
+      { enableHighAccuracy: true }
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, []);
+
+  // 2. Search Handler (City or Latitude & Longitude)
+  const handleSearchLocation = async (e) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+
+    setIsSearching(true);
+
+    // Direct Lat, Lng search e.g., "10.7202, 122.5621"
+    const coordMatch = searchQuery.match(/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/);
+    if (coordMatch) {
+      const lat = parseFloat(coordMatch[1]);
+      const lng = parseFloat(coordMatch[3]);
+      const newPin = {
+        id: Date.now(),
+        type: 'SEARCHED TARGET',
+        lat,
+        lng,
+        location: `PING (${lat.toFixed(2)}, ${lng.toFixed(2)})`,
+        note: 'Location located via direct coordinates'
+      };
+
+      setSightings((prev) => [...prev, newPin]);
+      setTargetCoords([lat, lng]);
+      setIsSearching(false);
+      return;
+    }
+
+    // Geocode Search via Nominatim
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`);
+      const data = await res.json();
+      if (data && data.length > 0) {
+        const lat = parseFloat(data[0].lat);
+        const lng = parseFloat(data[0].lon);
+        const locName = data[0].display_name.split(',')[0];
+
+        const newPin = {
+          id: Date.now(),
+          type: 'SEARCHED INTEL',
+          lat,
+          lng,
+          location: locName,
+          note: 'Location located via search grid'
+        };
+
+        setSightings((prev) => [...prev, newPin]);
+        setTargetCoords([lat, lng]);
+      } else {
+        alert('TARGET UNKNOWN TO CYPHER NETWORK');
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Jump camera back to live location
+  const handleJumpToDevice = () => {
+    if (deviceCoords) {
+      setTargetCoords(deviceCoords);
+    } else {
+      alert('ACQUIRING DEVICE SIGNAL...');
+    }
+  };
+
+  // Save manually reported intel sighting
   const handleAddSighting = (e) => {
     e.preventDefault();
     if (!newSighting.location || !newSighting.lat || !newSighting.lng) return;
 
-    const addedItem = {
+    const added = {
       id: Date.now(),
       type: newSighting.type,
       lat: parseFloat(newSighting.lat),
@@ -55,8 +153,8 @@ export default function Map() {
       note: newSighting.note || 'Classified Intel'
     };
 
-    setSightings((prev) => [...prev, addedItem]);
-    setTargetCoords([addedItem.lat, addedItem.lng]);
+    setSightings((prev) => [...prev, added]);
+    setTargetCoords([added.lat, added.lng]);
     setIsModalOpen(false);
     setNewSighting({ type: 'Trapwire', location: '', lat: '', lng: '', note: '' });
   };
@@ -68,19 +166,15 @@ export default function Map() {
         <img 
           src="/cypher.png" 
           alt="Cypher" 
-          style={styles.headerIcon}
-          onError={(e) => {
-            e.target.src = 'https://api.iconify.design/pixelarticons:user.svg?color=%2300f0ff';
-          }}
+          style={styles.headerIcon} 
+          onError={(e) => { e.target.src = 'https://api.iconify.design/pixelarticons:user.svg?color=%2300f0ff'; }}
         />
         <div style={styles.headerTitle}>CYPHER SIGHTINGS TRACKER</div>
         <img 
           src="/cypher.png" 
           alt="Cypher" 
-          style={styles.headerIcon}
-          onError={(e) => {
-            e.target.src = 'https://api.iconify.design/pixelarticons:user.svg?color=%2300f0ff';
-          }}
+          style={styles.headerIcon} 
+          onError={(e) => { e.target.src = 'https://api.iconify.design/pixelarticons:user.svg?color=%2300f0ff'; }}
         />
       </div>
 
@@ -89,20 +183,37 @@ export default function Map() {
         {/* CRT Scanline FX Overlay */}
         <div className="crt-overlay"></div>
 
-        {/* Top Status & Controls Box */}
+        {/* Status Box & Controls Header */}
         <div style={styles.statusBox}>
-          <p style={{ margin: 0, fontSize: '9px', color: '#00f0ff' }}>SYS.LOC // ACTIVE SIGHTINGS: {sightings.length}</p>
-          <div style={styles.buttonGroup}>
+          <p style={{ margin: '0 0 6px 0', fontSize: '9px', color: '#00f0ff' }}>
+            SYS.LOC // {deviceCoords ? 'BEACON ACTIVE' : 'ACQUIRING BEACON...'} | LOGGED INTEL: {sightings.length}
+          </p>
+          
+          <div style={styles.controlsRow}>
+            <form onSubmit={handleSearchLocation} style={{ display: 'flex', gap: '4px' }}>
+              <input
+                type="text"
+                placeholder="Search City or 'Lat, Lng'..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={styles.searchInput}
+              />
+              <button type="submit" style={styles.searchBtn} disabled={isSearching}>
+                {isSearching ? '...' : 'LOCATE'}
+              </button>
+            </form>
+
+            <button style={styles.homeBtn} onClick={handleJumpToDevice}>
+              MY LIVE LOC
+            </button>
+
             <button style={styles.actionBtn} onClick={() => setIsModalOpen(true)}>
               + REPORT INTEL
             </button>
-            <button style={styles.jumpBtn} onClick={() => setTargetCoords([35.6762, 139.6503])}>TOKYO</button>
-            <button style={styles.jumpBtn} onClick={() => setTargetCoords([52.5200, 13.4050])}>BERLIN</button>
-            <button style={styles.jumpBtn} onClick={() => setTargetCoords([10.7202, 122.5621])}>ILOILO</button>
           </div>
         </div>
 
-        {/* Tactical Radar HUD with Animated Sweep Line */}
+        {/* Tactical Radar HUD */}
         <div style={styles.radarHud}>
           <div style={styles.radarGridHorizontal}></div>
           <div style={styles.radarGridVertical}></div>
@@ -110,7 +221,7 @@ export default function Map() {
           
           <img 
             src="https://api.iconify.design/pixelarticons:eye.svg?color=%2300f0ff" 
-            alt="Spy Cam Radar" 
+            alt="Radar" 
             style={{ width: '28px', height: '28px', zIndex: 2 }} 
           />
           <span style={styles.radarText}>RADAR SWEEP</span>
@@ -118,21 +229,39 @@ export default function Map() {
 
         {/* Dark Tactical Map */}
         <MapContainer
-          center={[10.7202, 122.5621]}
+          center={deviceCoords || [10.7202, 122.5621]}
           zoom={3}
+          minZoom={2.5}
+          maxBounds={outerWorldBounds}
+          maxBoundsViscosity={1.0}
           style={{ height: '100%', width: '100%', background: '#08121e' }}
           zoomControl={false}
           attributionControl={false}
         >
           <TileLayer
-            attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+            attribution='&copy; CARTO'
             url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            noWrap={true}
+            bounds={outerWorldBounds}
           />
 
           {targetCoords && <MapFlyTo coords={targetCoords} />}
 
+          {/* YOUR LIVE DEVICE SIGNAL PIN (8-BIT CYPHER ICON RESTORED) */}
+          {deviceCoords && (
+            <Marker position={deviceCoords} icon={liveDevice8BitIcon}>
+              <Popup>
+                <div style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: '10px', color: '#111' }}>
+                  📡 <strong>YOUR LIVE DEVICE SIGNAL</strong><br />
+                  LAT: {deviceCoords[0].toFixed(4)} | LNG: {deviceCoords[1].toFixed(4)}
+                </div>
+              </Popup>
+            </Marker>
+          )}
+
+          {/* PINS ADDED ONLY VIA SEARCH OR REPORT */}
           {sightings.map((s) => (
-            <Marker key={s.id} position={[s.lat, s.lng]} icon={cypherMarkerIcon}>
+            <Marker key={s.id} position={[s.lat, s.lng]} icon={cypher8BitIcon}>
               <Popup>
                 <div style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: '10px', color: '#111' }}>
                   <strong>[{s.type.toUpperCase()}] DETECTED</strong><br />
@@ -144,7 +273,7 @@ export default function Map() {
           ))}
         </MapContainer>
 
-        {/* Modal: Add New Sighting Form */}
+        {/* Modal: Report Intel */}
         {isModalOpen && (
           <div style={styles.modalOverlay}>
             <div style={styles.modalContent}>
@@ -157,7 +286,7 @@ export default function Map() {
                   placeholder="Location Name (e.g. Manila)"
                   value={newSighting.location}
                   onChange={(e) => setNewSighting({ ...newSighting, location: e.target.value })}
-                  style={styles.inputStyle}
+                  style={styles.modalInput}
                   required
                 />
                 <div style={{ display: 'flex', gap: '6px' }}>
@@ -167,7 +296,7 @@ export default function Map() {
                     placeholder="Latitude"
                     value={newSighting.lat}
                     onChange={(e) => setNewSighting({ ...newSighting, lat: e.target.value })}
-                    style={styles.inputStyle}
+                    style={styles.modalInput}
                     required
                   />
                   <input
@@ -176,7 +305,7 @@ export default function Map() {
                     placeholder="Longitude"
                     value={newSighting.lng}
                     onChange={(e) => setNewSighting({ ...newSighting, lng: e.target.value })}
-                    style={styles.inputStyle}
+                    style={styles.modalInput}
                     required
                   />
                 </div>
@@ -185,7 +314,7 @@ export default function Map() {
                   placeholder="Intel Note"
                   value={newSighting.note}
                   onChange={(e) => setNewSighting({ ...newSighting, note: e.target.value })}
-                  style={styles.inputStyle}
+                  style={styles.modalInput}
                 />
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '6px' }}>
                   <button type="button" onClick={() => setIsModalOpen(false)} style={styles.cancelBtn}>
@@ -201,7 +330,7 @@ export default function Map() {
         )}
       </div>
 
-      {/* Bottom Marquee Feed */}
+      {/* Marquee Feed */}
       <div style={styles.bottomBar}>
         <span style={styles.marqueeText}>
           CYPHER INTEL FEED: ACTIVE NEURAL THEFT SIMULATIONS IN ISTANBUL ■ LOCAL NETWORK STATUS: OPTIMAL
@@ -211,7 +340,7 @@ export default function Map() {
   );
 }
 
-// Retro UI Styles
+// Tactical UI Styles
 const styles = {
   outerFrame: {
     height: '100vh',
@@ -264,16 +393,43 @@ const styles = {
     zIndex: 1000,
     backgroundColor: '#0d1e2d',
     border: '3px solid #00f0ff',
-    padding: '8px 14px',
+    padding: '8px 12px',
     textAlign: 'center',
     borderRadius: '6px',
     boxShadow: '0 4px 0 #000',
   },
-  buttonGroup: {
+  controlsRow: {
     display: 'flex',
     gap: '6px',
-    marginTop: '6px',
-    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchInput: {
+    backgroundColor: '#050b10',
+    border: '1px solid #00f0ff',
+    color: '#00f0ff',
+    fontFamily: 'inherit',
+    fontSize: '8px',
+    padding: '4px 8px',
+    width: '150px',
+    borderRadius: '2px',
+  },
+  searchBtn: {
+    backgroundColor: '#0f2333',
+    color: '#00f0ff',
+    border: '1px solid #00f0ff',
+    fontFamily: 'inherit',
+    fontSize: '8px',
+    padding: '4px 8px',
+    cursor: 'pointer',
+  },
+  homeBtn: {
+    backgroundColor: '#0f2333',
+    color: '#00f0ff',
+    border: '1px solid #00a8ff',
+    fontFamily: 'inherit',
+    fontSize: '8px',
+    padding: '5px 8px',
+    cursor: 'pointer',
   },
   actionBtn: {
     backgroundColor: '#00f0ff',
@@ -281,18 +437,9 @@ const styles = {
     border: 'none',
     fontFamily: 'inherit',
     fontSize: '8px',
-    padding: '4px 8px',
+    padding: '5px 8px',
     cursor: 'pointer',
     fontWeight: 'bold',
-  },
-  jumpBtn: {
-    backgroundColor: '#0f2333',
-    color: '#00f0ff',
-    border: '1px solid #00f0ff',
-    fontFamily: 'inherit',
-    fontSize: '8px',
-    padding: '4px 6px',
-    cursor: 'pointer',
   },
   radarHud: {
     position: 'absolute',
@@ -351,7 +498,7 @@ const styles = {
     borderRadius: '8px',
     width: '280px',
   },
-  inputStyle: {
+  modalInput: {
     backgroundColor: '#050b10',
     border: '1px solid #00a8ff',
     color: '#00f0ff',
