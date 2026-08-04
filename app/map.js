@@ -9,20 +9,18 @@ import L from 'leaflet';
 // RETRO 8-BIT / PIXEL ART ICONS
 // ----------------------------------------------------
 
-// 8-Bit Cypher Icon for Live Device Signal
 const liveDevice8BitIcon = new L.Icon({
   iconUrl: '/cypher.png',
-  iconSize: [40, 40],
-  iconAnchor: [20, 20],
-  popupAnchor: [0, -20],
+  iconSize: [36, 36],
+  iconAnchor: [18, 18],
+  popupAnchor: [0, -18],
 });
 
-// 8-Bit Cypher Icon for Searched & Reported Sightings
 const cypher8BitIcon = new L.Icon({
   iconUrl: '/cypher.png',
-  iconSize: [40, 40],
-  iconAnchor: [20, 20],
-  popupAnchor: [0, -20],
+  iconSize: [36, 36],
+  iconAnchor: [18, 18],
+  popupAnchor: [0, -18],
 });
 
 // Helper component to smoothly fly map view
@@ -37,18 +35,12 @@ function MapFlyTo({ coords }) {
 }
 
 export default function Map() {
-  // Live Device Tracking State
   const [deviceCoords, setDeviceCoords] = useState(null);
-
-  // Sightings state initialized EMPTY
   const [sightings, setSightings] = useState([]);
-
-  // Search & Navigation States
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [targetCoords, setTargetCoords] = useState(null);
 
-  // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newSighting, setNewSighting] = useState({ type: 'Trapwire', location: '', lat: '', lng: '', note: '' });
 
@@ -58,7 +50,6 @@ export default function Map() {
     [90, 180],
   ];
 
-  // 1. Continuously Track Device Live Location
   useEffect(() => {
     if (!navigator.geolocation) return;
 
@@ -73,14 +64,12 @@ export default function Map() {
     return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
-  // 2. Search Handler (City or Latitude & Longitude)
   const handleSearchLocation = async (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
 
     setIsSearching(true);
 
-    // Direct Lat, Lng search e.g., "10.7202, 122.5621"
     const coordMatch = searchQuery.match(/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/);
     if (coordMatch) {
       const lat = parseFloat(coordMatch[1]);
@@ -100,7 +89,6 @@ export default function Map() {
       return;
     }
 
-    // Geocode Search via Nominatim
     try {
       const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`);
       const data = await res.json();
@@ -130,12 +118,10 @@ export default function Map() {
     }
   };
 
-  // 3. Delete Sighting Handler
   const handleDeleteSighting = (id) => {
     setSightings((prev) => prev.filter((item) => item.id !== id));
   };
 
-  // Jump camera back to live location
   const handleJumpToDevice = () => {
     if (deviceCoords) {
       setTargetCoords(deviceCoords);
@@ -144,7 +130,6 @@ export default function Map() {
     }
   };
 
-  // Save manually reported intel sighting
   const handleAddSighting = (e) => {
     e.preventDefault();
     if (!newSighting.location || !newSighting.lat || !newSighting.lng) return;
@@ -174,7 +159,7 @@ export default function Map() {
           style={styles.headerIcon} 
           onError={(e) => { e.target.src = 'https://api.iconify.design/pixelarticons:user.svg?color=%2300f0ff'; }}
         />
-        <div style={styles.headerTitle}>CYPHER SIGHTINGS TRACKER</div>
+        <div style={styles.headerTitle}>CYPHER TRACKER</div>
         <img 
           src="/cypher.png" 
           alt="Cypher" 
@@ -185,20 +170,20 @@ export default function Map() {
 
       {/* Main Screen Container */}
       <div style={styles.monitorContainer}>
-        {/* CRT Scanline FX Overlay */}
+        {/* CRT Scanline Overlay */}
         <div className="crt-overlay"></div>
 
-        {/* Status Box & Controls Header */}
+        {/* Dynamic Status Box & Search Form */}
         <div style={styles.statusBox}>
-          <p style={{ margin: '0 0 6px 0', fontSize: '9px', color: '#00f0ff' }}>
-            SYS.LOC // {deviceCoords ? 'BEACON ACTIVE' : 'ACQUIRING BEACON...'} | LOGGED INTEL: {sightings.length}
+          <p style={styles.statusText}>
+            SYS.LOC // {deviceCoords ? 'BEACON ACTIVE' : 'ACQUIRING...'} | INTEL: {sightings.length}
           </p>
           
           <div style={styles.controlsRow}>
-            <form onSubmit={handleSearchLocation} style={{ display: 'flex', gap: '4px' }}>
+            <form onSubmit={handleSearchLocation} style={styles.searchForm}>
               <input
                 type="text"
-                placeholder="Search City or 'Lat, Lng'..."
+                placeholder="Search 'Lat, Lng' or City..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={styles.searchInput}
@@ -208,13 +193,15 @@ export default function Map() {
               </button>
             </form>
 
-            <button style={styles.homeBtn} onClick={handleJumpToDevice}>
-              MY LIVE LOC
-            </button>
+            <div style={styles.btnGroup}>
+              <button style={styles.homeBtn} onClick={handleJumpToDevice}>
+                MY LOC
+              </button>
 
-            <button style={styles.actionBtn} onClick={() => setIsModalOpen(true)}>
-              + REPORT INTEL
-            </button>
+              <button style={styles.actionBtn} onClick={() => setIsModalOpen(true)}>
+                + REPORT
+              </button>
+            </div>
           </div>
         </div>
 
@@ -227,16 +214,16 @@ export default function Map() {
           <img 
             src="https://api.iconify.design/pixelarticons:eye.svg?color=%2300f0ff" 
             alt="Radar" 
-            style={{ width: '28px', height: '28px', zIndex: 2 }} 
+            style={{ width: '22px', height: '22px', zIndex: 2 }} 
           />
-          <span style={styles.radarText}>RADAR SWEEP</span>
+          <span style={styles.radarText}>RADAR</span>
         </div>
 
         {/* Dark Tactical Map */}
         <MapContainer
           center={deviceCoords || [10.7202, 122.5621]}
           zoom={3}
-          minZoom={2.5}
+          minZoom={2}
           maxBounds={outerWorldBounds}
           maxBoundsViscosity={1.0}
           style={{ height: '100%', width: '100%', background: '#08121e' }}
@@ -252,7 +239,7 @@ export default function Map() {
 
           {targetCoords && <MapFlyTo coords={targetCoords} />}
 
-          {/* YOUR LIVE DEVICE SIGNAL PIN */}
+          {/* Live Device Pin */}
           {deviceCoords && (
             <Marker position={deviceCoords} icon={liveDevice8BitIcon}>
               <Popup>
@@ -264,11 +251,11 @@ export default function Map() {
             </Marker>
           )}
 
-          {/* PINS ADDED VIA SEARCH OR REPORT (WITH DELETE BUTTON) */}
+          {/* Sightings Pins */}
           {sightings.map((s) => (
             <Marker key={s.id} position={[s.lat, s.lng]} icon={cypher8BitIcon}>
               <Popup>
-                <div style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: '10px', color: '#111', minWidth: '130px' }}>
+                <div style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: '10px', color: '#111', minWidth: '120px' }}>
                   <strong>[{s.type.toUpperCase()}] DETECTED</strong><br />
                   📍 {s.location}<br />
                   💬 <em>"{s.note}"</em>
@@ -296,11 +283,11 @@ export default function Map() {
           ))}
         </MapContainer>
 
-        {/* Modal: Report Intel */}
+        {/* Modal: Report Intel Form */}
         {isModalOpen && (
           <div style={styles.modalOverlay}>
             <div style={styles.modalContent}>
-              <h4 style={{ margin: '0 0 10px 0', color: '#00f0ff', fontSize: '12px' }}>
+              <h4 style={{ margin: '0 0 10px 0', color: '#00f0ff', fontSize: '11px' }}>
                 SUBMIT NEW CYPHER INTEL
               </h4>
               <form onSubmit={handleAddSighting} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -363,13 +350,13 @@ export default function Map() {
   );
 }
 
-// Tactical UI Styles
+// Fully Responsive Mobile-Ready Styles
 const styles = {
   outerFrame: {
     height: '100vh',
     width: '100vw',
     backgroundColor: '#0a141d',
-    padding: '16px',
+    padding: '8px',
     boxSizing: 'border-box',
     display: 'flex',
     flexDirection: 'column',
@@ -379,52 +366,74 @@ const styles = {
   },
   headerBar: {
     backgroundColor: '#0f2333',
-    border: '4px solid #00a8ff',
-    padding: '8px 18px',
-    borderRadius: '10px',
-    boxShadow: '0 4px 0 #000, 0 0 12px rgba(0, 168, 255, 0.4)',
+    border: '3px solid #00a8ff',
+    padding: '6px 12px',
+    borderRadius: '8px',
+    boxShadow: '0 3px 0 #000',
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
+    justifyContent: 'center',
+    gap: '8px',
+    maxWidth: '100%',
+    boxSizing: 'border-box',
   },
   headerIcon: {
-    width: '28px',
-    height: '28px',
+    width: '20px',
+    height: '20px',
     objectFit: 'contain',
   },
   headerTitle: {
     color: '#e0f7fc',
-    fontSize: '16px',
-    letterSpacing: '2px',
-    textShadow: '2px 2px #000',
+    fontSize: '12px',
+    letterSpacing: '1px',
+    textShadow: '1px 1px #000',
+    whiteSpace: 'nowrap',
   },
   monitorContainer: {
     position: 'relative',
     width: '100%',
-    height: 'calc(100vh - 170px)',
-    border: '6px solid #1a3a52',
-    outline: '3px solid #00f0ff',
-    borderRadius: '12px',
+    height: 'calc(100vh - 130px)',
+    border: '4px solid #1a3a52',
+    outline: '2px solid #00f0ff',
+    borderRadius: '10px',
     overflow: 'hidden',
-    boxShadow: 'inset 0 0 30px rgba(0,0,0,0.8), 0 8px 0 #000',
+    boxShadow: 'inset 0 0 20px rgba(0,0,0,0.8), 0 6px 0 #000',
   },
   statusBox: {
     position: 'absolute',
-    top: '12px',
+    top: '8px',
     left: '50%',
     transform: 'translateX(-50%)',
     zIndex: 1000,
-    backgroundColor: '#0d1e2d',
-    border: '3px solid #00f0ff',
-    padding: '8px 12px',
+    backgroundColor: 'rgba(13, 30, 45, 0.95)',
+    border: '2px solid #00f0ff',
+    padding: '6px 10px',
     textAlign: 'center',
     borderRadius: '6px',
     boxShadow: '0 4px 0 #000',
+    width: 'calc(100% - 24px)',
+    maxWidth: '420px',
+    boxSizing: 'border-box',
+  },
+  statusText: {
+    margin: '0 0 4px 0',
+    fontSize: '8px',
+    color: '#00f0ff',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
   },
   controlsRow: {
     display: 'flex',
-    gap: '6px',
+    gap: '4px',
     alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+  },
+  searchForm: {
+    display: 'flex',
+    gap: '4px',
+    flex: '1 1 180px',
   },
   searchInput: {
     backgroundColor: '#050b10',
@@ -432,9 +441,10 @@ const styles = {
     color: '#00f0ff',
     fontFamily: 'inherit',
     fontSize: '8px',
-    padding: '4px 8px',
-    width: '150px',
+    padding: '4px 6px',
+    width: '100%',
     borderRadius: '2px',
+    boxSizing: 'border-box',
   },
   searchBtn: {
     backgroundColor: '#0f2333',
@@ -442,8 +452,13 @@ const styles = {
     border: '1px solid #00f0ff',
     fontFamily: 'inherit',
     fontSize: '8px',
-    padding: '4px 8px',
+    padding: '4px 6px',
     cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  },
+  btnGroup: {
+    display: 'flex',
+    gap: '4px',
   },
   homeBtn: {
     backgroundColor: '#0f2333',
@@ -451,8 +466,9 @@ const styles = {
     border: '1px solid #00a8ff',
     fontFamily: 'inherit',
     fontSize: '8px',
-    padding: '5px 8px',
+    padding: '4px 6px',
     cursor: 'pointer',
+    whiteSpace: 'nowrap',
   },
   actionBtn: {
     backgroundColor: '#00f0ff',
@@ -460,25 +476,26 @@ const styles = {
     border: 'none',
     fontFamily: 'inherit',
     fontSize: '8px',
-    padding: '5px 8px',
+    padding: '4px 6px',
     cursor: 'pointer',
     fontWeight: 'bold',
+    whiteSpace: 'nowrap',
   },
   radarHud: {
     position: 'absolute',
-    bottom: '20px',
-    right: '20px',
+    bottom: '12px',
+    right: '12px',
     zIndex: 1000,
-    width: '90px',
-    height: '90px',
+    width: '65px',
+    height: '65px',
     borderRadius: '50%',
-    border: '3px solid #00f0ff',
+    border: '2px solid #00f0ff',
     backgroundColor: 'rgba(5, 20, 35, 0.9)',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0 0 15px rgba(0, 240, 255, 0.4)',
+    boxShadow: '0 0 10px rgba(0, 240, 255, 0.4)',
     pointerEvents: 'none',
     overflow: 'hidden',
   },
@@ -499,9 +516,9 @@ const styles = {
     backgroundColor: 'rgba(0, 240, 255, 0.25)',
   },
   radarText: {
-    fontSize: '6px',
+    fontSize: '5px',
     color: '#00f0ff',
-    marginTop: '2px',
+    marginTop: '1px',
     letterSpacing: '1px',
     zIndex: 2,
   },
@@ -513,13 +530,16 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    padding: '12px',
   },
   modalContent: {
     backgroundColor: '#0d1e2d',
-    border: '3px solid #00f0ff',
-    padding: '16px',
+    border: '2px solid #00f0ff',
+    padding: '14px',
     borderRadius: '8px',
-    width: '280px',
+    width: '100%',
+    maxWidth: '280px',
+    boxSizing: 'border-box',
   },
   modalInput: {
     backgroundColor: '#050b10',
@@ -553,15 +573,18 @@ const styles = {
   bottomBar: {
     width: '100%',
     backgroundColor: '#050b10',
-    border: '3px solid #00a8ff',
+    border: '2px solid #00a8ff',
     borderRadius: '6px',
-    padding: '10px',
+    padding: '6px',
     textAlign: 'center',
-    boxShadow: '0 4px 0 #000',
+    boxShadow: '0 3px 0 #000',
+    boxSizing: 'border-box',
+    overflow: 'hidden',
   },
   marqueeText: {
     color: '#00f0ff',
-    fontSize: '10px',
+    fontSize: '8px',
     letterSpacing: '1px',
+    whiteSpace: 'nowrap',
   },
 };
