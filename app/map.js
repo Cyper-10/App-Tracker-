@@ -9,7 +9,7 @@ import L from 'leaflet';
 // RETRO 8-BIT / PIXEL ART ICONS
 // ----------------------------------------------------
 
-// Restored 8-Bit Cypher Icon for Live Device Signal
+// 8-Bit Cypher Icon for Live Device Signal
 const liveDevice8BitIcon = new L.Icon({
   iconUrl: '/cypher.png',
   iconSize: [40, 40],
@@ -130,6 +130,11 @@ export default function Map() {
     }
   };
 
+  // 3. Delete Sighting Handler
+  const handleDeleteSighting = (id) => {
+    setSightings((prev) => prev.filter((item) => item.id !== id));
+  };
+
   // Jump camera back to live location
   const handleJumpToDevice = () => {
     if (deviceCoords) {
@@ -247,7 +252,7 @@ export default function Map() {
 
           {targetCoords && <MapFlyTo coords={targetCoords} />}
 
-          {/* YOUR LIVE DEVICE SIGNAL PIN (8-BIT CYPHER ICON RESTORED) */}
+          {/* YOUR LIVE DEVICE SIGNAL PIN */}
           {deviceCoords && (
             <Marker position={deviceCoords} icon={liveDevice8BitIcon}>
               <Popup>
@@ -259,14 +264,32 @@ export default function Map() {
             </Marker>
           )}
 
-          {/* PINS ADDED ONLY VIA SEARCH OR REPORT */}
+          {/* PINS ADDED VIA SEARCH OR REPORT (WITH DELETE BUTTON) */}
           {sightings.map((s) => (
             <Marker key={s.id} position={[s.lat, s.lng]} icon={cypher8BitIcon}>
               <Popup>
-                <div style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: '10px', color: '#111' }}>
+                <div style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: '10px', color: '#111', minWidth: '130px' }}>
                   <strong>[{s.type.toUpperCase()}] DETECTED</strong><br />
                   📍 {s.location}<br />
                   💬 <em>"{s.note}"</em>
+                  <hr style={{ margin: '6px 0', borderColor: '#ccc' }} />
+                  <button
+                    onClick={() => handleDeleteSighting(s.id)}
+                    style={{
+                      backgroundColor: '#ff3b30',
+                      color: '#fff',
+                      border: 'none',
+                      fontFamily: 'inherit',
+                      fontSize: '8px',
+                      padding: '4px 6px',
+                      cursor: 'pointer',
+                      borderRadius: '2px',
+                      width: '100%',
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    🗑️ DELETE PIN
+                  </button>
                 </div>
               </Popup>
             </Marker>
