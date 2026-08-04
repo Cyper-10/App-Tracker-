@@ -5,27 +5,20 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
-// ----------------------------------------------------
-// RETRO 8-BIT / PIXEL ART ICONS
-// ----------------------------------------------------
-
-// 8-Bit Cypher Icon for Live Device Signal
 const liveDevice8BitIcon = new L.Icon({
   iconUrl: '/cypher.png',
-  iconSize: [36, 36],
-  iconAnchor: [18, 18],
-  popupAnchor: [0, -18],
+  iconSize: [40, 40],
+  iconAnchor: [20, 20],
+  popupAnchor: [0, -20],
 });
 
-// 8-Bit Cypher Icon for Searched & Reported Sightings
 const cypher8BitIcon = new L.Icon({
   iconUrl: '/cypher.png',
-  iconSize: [36, 36],
-  iconAnchor: [18, 18],
-  popupAnchor: [0, -18],
+  iconSize: [40, 40],
+  iconAnchor: [20, 20],
+  popupAnchor: [0, -20],
 });
 
-// Helper component to smoothly fly map view
 function MapFlyTo({ coords }) {
   const map = useMap();
   useEffect(() => {
@@ -37,28 +30,20 @@ function MapFlyTo({ coords }) {
 }
 
 export default function Map() {
-  // Live Device Tracking State
   const [deviceCoords, setDeviceCoords] = useState(null);
-
-  // Sightings state initialized EMPTY
   const [sightings, setSightings] = useState([]);
-
-  // Search & Navigation States
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [targetCoords, setTargetCoords] = useState(null);
 
-  // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newSighting, setNewSighting] = useState({ type: 'Trapwire', location: '', lat: '', lng: '', note: '' });
 
-  // Strictly define world bounds to prevent repetition/stretching
   const outerWorldBounds = [
     [-90, -180],
     [90, 180],
   ];
 
-  // 1. Continuously Track Device Live Location
   useEffect(() => {
     if (!navigator.geolocation) return;
 
@@ -73,14 +58,12 @@ export default function Map() {
     return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
-  // 2. Search Handler (City or Latitude & Longitude)
   const handleSearchLocation = async (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
 
     setIsSearching(true);
 
-    // Direct Lat, Lng search e.g., "10.7202, 122.5621"
     const coordMatch = searchQuery.match(/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/);
     if (coordMatch) {
       const lat = parseFloat(coordMatch[1]);
@@ -100,7 +83,6 @@ export default function Map() {
       return;
     }
 
-    // Geocode Search via Nominatim
     try {
       const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`);
       const data = await res.json();
@@ -130,12 +112,10 @@ export default function Map() {
     }
   };
 
-  // 3. Delete Sighting Handler
   const handleDeleteSighting = (id) => {
     setSightings((prev) => prev.filter((item) => item.id !== id));
   };
 
-  // Jump camera back to live location
   const handleJumpToDevice = () => {
     if (deviceCoords) {
       setTargetCoords(deviceCoords);
@@ -144,7 +124,6 @@ export default function Map() {
     }
   };
 
-  // Save manually reported intel sighting
   const handleAddSighting = (e) => {
     e.preventDefault();
     if (!newSighting.location || !newSighting.lat || !newSighting.lng) return;
@@ -165,19 +144,21 @@ export default function Map() {
   };
 
   return (
-    <div style={styles.outerFrame}>
+    <div className="outer-frame" style={styles.outerFrame}>
       {/* Top Banner Header */}
-      <div style={styles.headerBar}>
+      <div className="header-bar" style={styles.headerBar}>
         <img 
           src="/cypher.png" 
           alt="Cypher" 
+          className="header-icon"
           style={styles.headerIcon} 
           onError={(e) => { e.target.src = 'https://api.iconify.design/pixelarticons:user.svg?color=%2300f0ff'; }}
         />
-        <div style={styles.headerTitle}>CYPHER TRACKER</div>
+        <div className="header-title" style={styles.headerTitle}>CYPHER TRACKER</div>
         <img 
           src="/cypher.png" 
           alt="Cypher" 
+          className="header-icon"
           style={styles.headerIcon} 
           onError={(e) => { e.target.src = 'https://api.iconify.design/pixelarticons:user.svg?color=%2300f0ff'; }}
         />
@@ -185,12 +166,11 @@ export default function Map() {
 
       {/* Main Screen Container */}
       <div style={styles.monitorContainer}>
-        {/* CRT Scanline FX Overlay */}
         <div className="crt-overlay"></div>
 
-        {/* Status Box & Controls Header */}
-        <div style={styles.statusBox}>
-          <p style={styles.statusText}>
+        {/* Dynamic Status Box */}
+        <div className="status-box" style={styles.statusBox}>
+          <p className="status-text" style={styles.statusText}>
             SYS.LOC // {deviceCoords ? 'BEACON ACTIVE' : 'ACQUIRING...'} | INTEL: {sightings.length}
           </p>
           
@@ -201,19 +181,20 @@ export default function Map() {
                 placeholder="Search 'Lat, Lng' or City..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                className="search-input"
                 style={styles.searchInput}
               />
-              <button type="submit" style={styles.searchBtn} disabled={isSearching}>
+              <button type="submit" className="btn-ui" style={styles.searchBtn} disabled={isSearching}>
                 {isSearching ? '...' : 'LOCATE'}
               </button>
             </form>
 
             <div style={styles.btnGroup}>
-              <button style={styles.homeBtn} onClick={handleJumpToDevice}>
+              <button className="btn-ui" style={styles.homeBtn} onClick={handleJumpToDevice}>
                 MY LOC
               </button>
 
-              <button style={styles.actionBtn} onClick={() => setIsModalOpen(true)}>
+              <button className="btn-ui" style={styles.actionBtn} onClick={() => setIsModalOpen(true)}>
                 + REPORT
               </button>
             </div>
@@ -221,7 +202,7 @@ export default function Map() {
         </div>
 
         {/* Tactical Radar HUD */}
-        <div style={styles.radarHud}>
+        <div className="radar-hud" style={styles.radarHud}>
           <div style={styles.radarGridHorizontal}></div>
           <div style={styles.radarGridVertical}></div>
           <div className="radar-sweep-line"></div>
@@ -229,9 +210,10 @@ export default function Map() {
           <img 
             src="https://api.iconify.design/pixelarticons:eye.svg?color=%2300f0ff" 
             alt="Radar" 
+            className="radar-icon"
             style={{ width: '22px', height: '22px', zIndex: 2 }} 
           />
-          <span style={styles.radarText}>RADAR</span>
+          <span className="radar-text" style={styles.radarText}>RADAR</span>
         </div>
 
         {/* Dark Tactical Map */}
@@ -254,7 +236,6 @@ export default function Map() {
 
           {targetCoords && <MapFlyTo coords={targetCoords} />}
 
-          {/* YOUR LIVE DEVICE SIGNAL PIN */}
           {deviceCoords && (
             <Marker position={deviceCoords} icon={liveDevice8BitIcon}>
               <Popup>
@@ -266,7 +247,6 @@ export default function Map() {
             </Marker>
           )}
 
-          {/* PINS ADDED VIA SEARCH OR REPORT */}
           {sightings.map((s) => (
             <Marker key={s.id} position={[s.lat, s.lng]} icon={cypher8BitIcon}>
               <Popup>
@@ -298,7 +278,6 @@ export default function Map() {
           ))}
         </MapContainer>
 
-        {/* Modal: Report Intel */}
         {isModalOpen && (
           <div style={styles.modalOverlay}>
             <div style={styles.modalContent}>
@@ -355,9 +334,8 @@ export default function Map() {
         )}
       </div>
 
-      {/* Marquee Feed */}
       <div style={styles.bottomBar}>
-        <span style={styles.marqueeText}>
+        <span className="marquee-text" style={styles.marqueeText}>
           CYPHER INTEL FEED: ACTIVE NEURAL THEFT SIMULATIONS IN ISTANBUL ■ LOCAL NETWORK STATUS: OPTIMAL
         </span>
       </div>
@@ -365,10 +343,10 @@ export default function Map() {
   );
 }
 
-// Option 1 CSS Styles (Mobile Viewport & Border Fixes)
+// Mobile-first default styles (Desktop overridden via CSS media queries above)
 const styles = {
   outerFrame: {
-    height: '100dvh', // Dynamic viewport height prevents browser toolbar cropping
+    height: '100dvh',
     width: '100vw',
     backgroundColor: '#0a141d',
     padding: '6px',
@@ -408,7 +386,7 @@ const styles = {
   monitorContainer: {
     position: 'relative',
     width: '100%',
-    flex: 1, // Automatically resizes to fit available vertical space
+    flex: 1,
     margin: '6px 0',
     border: '3px solid #1a3a52',
     outline: '2px solid #00f0ff',
@@ -450,7 +428,7 @@ const styles = {
   searchForm: {
     display: 'flex',
     gap: '4px',
-    flex: '1 1 180px',
+    flex: '1 1 auto',
   },
   searchInput: {
     backgroundColor: '#050b10',
