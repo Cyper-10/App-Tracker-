@@ -1,5 +1,3 @@
-/* Add to app/globals.css */
-
 /* DESKTOP ENHANCEMENTS (768px and wider) */
 @media (min-width: 768px) {
   /* Header Bar */
@@ -54,11 +52,7 @@
 
   /* Bottom Marquee Feed */
   .bottom-bar {
-    padding: 10px !important;
+    padding: 10px 0 !important;
     border-width: 3px !important;
-  }
-  .marquee-text {
-    font-size: 11px !important;
-    letter-spacing: 1.5px !important;
   }
 }

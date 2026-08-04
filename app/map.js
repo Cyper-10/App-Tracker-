@@ -225,6 +225,7 @@ export default function Map() {
 
         {/* Dark Tactical Map */}
         <MapContainer
+          key={deviceCoords ? deviceCoords.join(',') : 'default-map'}
           center={deviceCoords || [10.7202, 122.5621]}
           zoom={3}
           minZoom={2}
@@ -341,11 +342,27 @@ export default function Map() {
         )}
       </div>
 
-      {/* Animated Broadcast Marquee Feed */}
+      {/* Seamless Continuous Ticker Marquee */}
       <div className="bottom-bar" style={styles.bottomBar}>
-        <span className="marquee-text" style={styles.marqueeText}>
-          CYPHER INTEL FEED: ACTIVE NEURAL THEFT SIMULATIONS IN ISTANBUL ■ LOCAL NETWORK STATUS: OPTIMAL ■ RECENT SIGNAL DETECTED AT GRID 10.7202, 122.5621
-        </span>
+        <div style={styles.tickerTrack}>
+          <span style={styles.tickerText}>
+            CYPHER INTEL FEED: ACTIVE NEURAL THEFT SIMULATIONS IN ISTANBUL ■ LOCAL NETWORK STATUS: OPTIMAL ■ RECENT SIGNAL DETECTED AT GRID 10.7202, 122.5621
+          </span>
+          <span style={styles.tickerText}>
+            CYPHER INTEL FEED: ACTIVE NEURAL THEFT SIMULATIONS IN ISTANBUL ■ LOCAL NETWORK STATUS: OPTIMAL ■ RECENT SIGNAL DETECTED AT GRID 10.7202, 122.5621
+          </span>
+        </div>
+
+        <style jsx>{`
+          @keyframes smoothTicker {
+            0% {
+              transform: translateX(0%);
+            }
+            100% {
+              transform: translateX(-50%);
+            }
+          }
+        `}</style>
       </div>
     </div>
   );
@@ -578,17 +595,24 @@ const styles = {
     border: '2px solid #00a8ff',
     borderRadius: '6px',
     padding: '6px 0',
-    textAlign: 'center',
     boxShadow: '0 3px 0 #000',
     boxSizing: 'border-box',
     overflow: 'hidden',
     display: 'flex',
     alignItems: 'center',
+    position: 'relative',
   },
-  marqueeText: {
+  tickerTrack: {
+    display: 'flex',
+    width: 'max-content',
+    animation: 'smoothTicker 20s linear infinite',
+  },
+  tickerText: {
     color: '#00f0ff',
-    fontSize: '8px',
+    fontSize: '10px',
     letterSpacing: '1px',
     whiteSpace: 'nowrap',
+    fontFamily: 'var(--font-pixel), monospace',
+    paddingRight: '80px',
   },
 };
