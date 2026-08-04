@@ -1,10 +1,8 @@
-/* Pixel font definitions or existing imports */
+/* Add to app/globals.css */
 
-/* Desktop & Laptop Enhancements (Screens 768px and wider) */
+/* DESKTOP ENHANCEMENTS (768px and wider) */
 @media (min-width: 768px) {
-  .outer-frame {
-    padding: 16px !important;
-  }
+  /* Header Bar */
   .header-bar {
     padding: 10px 24px !important;
     border-width: 4px !important;
@@ -17,9 +15,11 @@
     font-size: 18px !important;
     letter-spacing: 2px !important;
   }
+
+  /* Status / Control Box */
   .status-box {
     padding: 10px 16px !important;
-    max-width: 580px !important;
+    max-width: 620px !important;
     border-width: 3px !important;
   }
   .status-text {
@@ -29,12 +29,14 @@
   .search-input {
     font-size: 11px !important;
     padding: 6px 10px !important;
-    width: 220px !important;
+    width: 240px !important;
   }
   .btn-ui {
     font-size: 10px !important;
     padding: 6px 12px !important;
   }
+
+  /* Radar HUD */
   .radar-hud {
     width: 90px !important;
     height: 90px !important;
@@ -49,7 +51,14 @@
   .radar-text {
     font-size: 7px !important;
   }
+
+  /* Bottom Marquee Feed */
+  .bottom-bar {
+    padding: 10px !important;
+    border-width: 3px !important;
+  }
   .marquee-text {
     font-size: 11px !important;
+    letter-spacing: 1.5px !important;
   }
 }

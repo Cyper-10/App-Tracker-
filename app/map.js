@@ -5,6 +5,10 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
+// ----------------------------------------------------
+// RETRO 8-BIT / PIXEL ART ICONS
+// ----------------------------------------------------
+
 const liveDevice8BitIcon = new L.Icon({
   iconUrl: '/cypher.png',
   iconSize: [40, 40],
@@ -19,6 +23,7 @@ const cypher8BitIcon = new L.Icon({
   popupAnchor: [0, -20],
 });
 
+// Helper component to smoothly fly map view
 function MapFlyTo({ coords }) {
   const map = useMap();
   useEffect(() => {
@@ -44,6 +49,7 @@ export default function Map() {
     [90, 180],
   ];
 
+  // 1. Continuously Track Device Live Location
   useEffect(() => {
     if (!navigator.geolocation) return;
 
@@ -58,6 +64,7 @@ export default function Map() {
     return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
+  // 2. Search Handler
   const handleSearchLocation = async (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
@@ -334,16 +341,16 @@ export default function Map() {
         )}
       </div>
 
-      <div style={styles.bottomBar}>
+      {/* Animated Broadcast Marquee Feed */}
+      <div className="bottom-bar" style={styles.bottomBar}>
         <span className="marquee-text" style={styles.marqueeText}>
-          CYPHER INTEL FEED: ACTIVE NEURAL THEFT SIMULATIONS IN ISTANBUL ■ LOCAL NETWORK STATUS: OPTIMAL
+          CYPHER INTEL FEED: ACTIVE NEURAL THEFT SIMULATIONS IN ISTANBUL ■ LOCAL NETWORK STATUS: OPTIMAL ■ RECENT SIGNAL DETECTED AT GRID 10.7202, 122.5621
         </span>
       </div>
     </div>
   );
 }
 
-// Mobile-first default styles (Desktop overridden via CSS media queries above)
 const styles = {
   outerFrame: {
     height: '100dvh',
@@ -570,11 +577,13 @@ const styles = {
     backgroundColor: '#050b10',
     border: '2px solid #00a8ff',
     borderRadius: '6px',
-    padding: '6px',
+    padding: '6px 0',
     textAlign: 'center',
     boxShadow: '0 3px 0 #000',
     boxSizing: 'border-box',
     overflow: 'hidden',
+    display: 'flex',
+    alignItems: 'center',
   },
   marqueeText: {
     color: '#00f0ff',
