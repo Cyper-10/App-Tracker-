@@ -9,6 +9,7 @@ import L from 'leaflet';
 // RETRO 8-BIT / PIXEL ART ICONS
 // ----------------------------------------------------
 
+// 8-Bit Cypher Icon for Live Device Signal
 const liveDevice8BitIcon = new L.Icon({
   iconUrl: '/cypher.png',
   iconSize: [36, 36],
@@ -16,6 +17,7 @@ const liveDevice8BitIcon = new L.Icon({
   popupAnchor: [0, -18],
 });
 
+// 8-Bit Cypher Icon for Searched & Reported Sightings
 const cypher8BitIcon = new L.Icon({
   iconUrl: '/cypher.png',
   iconSize: [36, 36],
@@ -35,12 +37,18 @@ function MapFlyTo({ coords }) {
 }
 
 export default function Map() {
+  // Live Device Tracking State
   const [deviceCoords, setDeviceCoords] = useState(null);
+
+  // Sightings state initialized EMPTY
   const [sightings, setSightings] = useState([]);
+
+  // Search & Navigation States
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [targetCoords, setTargetCoords] = useState(null);
 
+  // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newSighting, setNewSighting] = useState({ type: 'Trapwire', location: '', lat: '', lng: '', note: '' });
 
@@ -50,6 +58,7 @@ export default function Map() {
     [90, 180],
   ];
 
+  // 1. Continuously Track Device Live Location
   useEffect(() => {
     if (!navigator.geolocation) return;
 
@@ -64,12 +73,14 @@ export default function Map() {
     return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
+  // 2. Search Handler (City or Latitude & Longitude)
   const handleSearchLocation = async (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
 
     setIsSearching(true);
 
+    // Direct Lat, Lng search e.g., "10.7202, 122.5621"
     const coordMatch = searchQuery.match(/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/);
     if (coordMatch) {
       const lat = parseFloat(coordMatch[1]);
@@ -89,6 +100,7 @@ export default function Map() {
       return;
     }
 
+    // Geocode Search via Nominatim
     try {
       const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`);
       const data = await res.json();
@@ -118,10 +130,12 @@ export default function Map() {
     }
   };
 
+  // 3. Delete Sighting Handler
   const handleDeleteSighting = (id) => {
     setSightings((prev) => prev.filter((item) => item.id !== id));
   };
 
+  // Jump camera back to live location
   const handleJumpToDevice = () => {
     if (deviceCoords) {
       setTargetCoords(deviceCoords);
@@ -130,6 +144,7 @@ export default function Map() {
     }
   };
 
+  // Save manually reported intel sighting
   const handleAddSighting = (e) => {
     e.preventDefault();
     if (!newSighting.location || !newSighting.lat || !newSighting.lng) return;
@@ -170,10 +185,10 @@ export default function Map() {
 
       {/* Main Screen Container */}
       <div style={styles.monitorContainer}>
-        {/* CRT Scanline Overlay */}
+        {/* CRT Scanline FX Overlay */}
         <div className="crt-overlay"></div>
 
-        {/* Dynamic Status Box & Search Form */}
+        {/* Status Box & Controls Header */}
         <div style={styles.statusBox}>
           <p style={styles.statusText}>
             SYS.LOC // {deviceCoords ? 'BEACON ACTIVE' : 'ACQUIRING...'} | INTEL: {sightings.length}
@@ -239,7 +254,7 @@ export default function Map() {
 
           {targetCoords && <MapFlyTo coords={targetCoords} />}
 
-          {/* Live Device Pin */}
+          {/* YOUR LIVE DEVICE SIGNAL PIN */}
           {deviceCoords && (
             <Marker position={deviceCoords} icon={liveDevice8BitIcon}>
               <Popup>
@@ -251,7 +266,7 @@ export default function Map() {
             </Marker>
           )}
 
-          {/* Sightings Pins */}
+          {/* PINS ADDED VIA SEARCH OR REPORT */}
           {sightings.map((s) => (
             <Marker key={s.id} position={[s.lat, s.lng]} icon={cypher8BitIcon}>
               <Popup>
@@ -283,7 +298,7 @@ export default function Map() {
           ))}
         </MapContainer>
 
-        {/* Modal: Report Intel Form */}
+        {/* Modal: Report Intel */}
         {isModalOpen && (
           <div style={styles.modalOverlay}>
             <div style={styles.modalContent}>
@@ -350,19 +365,20 @@ export default function Map() {
   );
 }
 
-// Fully Responsive Mobile-Ready Styles
+// Option 1 CSS Styles (Mobile Viewport & Border Fixes)
 const styles = {
   outerFrame: {
-    height: '100vh',
+    height: '100dvh', // Dynamic viewport height prevents browser toolbar cropping
     width: '100vw',
     backgroundColor: '#0a141d',
-    padding: '8px',
+    padding: '6px',
     boxSizing: 'border-box',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'space-between',
     fontFamily: 'var(--font-pixel), monospace',
+    overflow: 'hidden',
   },
   headerBar: {
     backgroundColor: '#0f2333',
@@ -392,12 +408,13 @@ const styles = {
   monitorContainer: {
     position: 'relative',
     width: '100%',
-    height: 'calc(100vh - 130px)',
-    border: '4px solid #1a3a52',
+    flex: 1, // Automatically resizes to fit available vertical space
+    margin: '6px 0',
+    border: '3px solid #1a3a52',
     outline: '2px solid #00f0ff',
-    borderRadius: '10px',
+    borderRadius: '8px',
     overflow: 'hidden',
-    boxShadow: 'inset 0 0 20px rgba(0,0,0,0.8), 0 6px 0 #000',
+    boxShadow: 'inset 0 0 20px rgba(0,0,0,0.8), 0 4px 0 #000',
   },
   statusBox: {
     position: 'absolute',

@@ -1,0 +1,22 @@
+{
+  "name": "Cypher Sightings Tracker",
+  "short_name": "CypherTracker",
+  "description": "Tactical 8-Bit Cyber Location Tracker",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a141d",
+  "theme_color": "#0f2333",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/cypher.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/cypher.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
