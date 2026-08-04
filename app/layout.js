@@ -1,20 +1,26 @@
-import { Press_Start_2P } from 'next/font/google';
-
-const pixelFont = Press_Start_2P({
-  weight: '400',
-  subsets: ['latin'],
-  variable: '--font-pixel',
-});
-
 export const metadata = {
   title: 'Cypher Sightings Tracker',
-  description: 'Cypher Intel & Map Sightings Tracker',
+  description: 'Tactical 8-Bit Cyber Location Tracker',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'CypherTracker',
+  },
+};
+
+export const viewport = {
+  themeColor: '#0f2333',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={pixelFont.className} style={{ margin: 0, padding: 0, backgroundColor: '#090f15', color: '#fff' }}>
+      <body style={{ margin: 0, padding: 0, backgroundColor: '#0a141d' }}>
         {children}
       </body>
     </html>
