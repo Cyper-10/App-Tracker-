@@ -4,7 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
-// Custom Cypher Map Icon
+// Custom Cypher Map Icon (falling back to online icon if /cypher.png isn't available)
 const cypherMarkerIcon = new L.Icon({
   iconUrl: '/cypher.png',
   iconSize: [40, 40],
@@ -15,11 +15,26 @@ const cypherMarkerIcon = new L.Icon({
 export default function Map() {
   return (
     <div style={styles.outerFrame}>
-      {/* Top Cypher Header Banner */}
+      {/* Top Banner Header */}
       <div style={styles.headerBar}>
-        <img src="/cypher.png" alt="Cypher" style={styles.headerIcon} />
+        <img 
+          src="/cypher.png" 
+          alt="Cypher" 
+          style={styles.headerIcon}
+          onError={(e) => {
+            // Fallback to pixel user icon if local file is missing
+            e.target.src = 'https://api.iconify.design/pixelarticons:user.svg?color=%2300f0ff';
+          }}
+        />
         <div style={styles.headerTitle}>CYPHER SIGHTINGS TRACKER</div>
-        <img src="/cypher.png" alt="Cypher" style={styles.headerIcon} />
+        <img 
+          src="/cypher.png" 
+          alt="Cypher" 
+          style={styles.headerIcon}
+          onError={(e) => {
+            e.target.src = 'https://api.iconify.design/pixelarticons:user.svg?color=%2300f0ff';
+          }}
+        />
       </div>
 
       {/* Main Screen Container */}
@@ -32,12 +47,20 @@ export default function Map() {
           </h3>
         </div>
 
-        {/* Floating Cypher Radar HUD */}
+        {/* Option 1: Cypher Tactical Spy Cam / Radar HUD */}
         <div style={styles.radarHud}>
-          <div style={styles.radarSweep}></div>
-          <span style={{ fontSize: '8px', color: '#00f0ff', position: 'absolute', bottom: '4px' }}>
-            RADAR ACTIVE
-          </span>
+          {/* Radar Radar Grid Lines */}
+          <div style={styles.radarGridHorizontal}></div>
+          <div style={styles.radarGridVertical}></div>
+          
+          {/* Pixel Eye / Spy Cam Icon */}
+          <img 
+            src="https://api.iconify.design/pixelarticons:eye.svg?color=%2300f0ff" 
+            alt="Spy Cam Radar" 
+            style={{ width: '32px', height: '32px', zIndex: 2 }} 
+          />
+          
+          <span style={styles.radarText}>RADAR ACTIVE</span>
         </div>
 
         {/* Dark Tactical Map */}
@@ -131,22 +154,49 @@ const styles = {
     borderRadius: '6px',
     boxShadow: '0 4px 0 #000',
   },
+  // --- Tactical Radar Styles ---
   radarHud: {
     position: 'absolute',
     bottom: '20px',
     right: '20px',
     zIndex: 1000,
-    width: '90px',
-    height: '90px',
+    width: '100px',
+    height: '100px',
     borderRadius: '50%',
-    border: '2px solid #00f0ff',
-    backgroundColor: 'rgba(5, 20, 35, 0.85)',
+    border: '3px solid #00f0ff',
+    backgroundColor: 'rgba(5, 20, 35, 0.9)',
     display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0 0 10px rgba(0, 240, 255, 0.3)',
+    boxShadow: '0 0 15px rgba(0, 240, 255, 0.4), inset 0 0 10px rgba(0, 240, 255, 0.2)',
     pointerEvents: 'none',
+    overflow: 'hidden',
   },
+  radarGridHorizontal: {
+    position: 'absolute',
+    top: '50%',
+    left: 0,
+    right: 0,
+    height: '1px',
+    backgroundColor: 'rgba(0, 240, 255, 0.25)',
+  },
+  radarGridVertical: {
+    position: 'absolute',
+    left: '50%',
+    top: 0,
+    bottom: 0,
+    width: '1px',
+    backgroundColor: 'rgba(0, 240, 255, 0.25)',
+  },
+  radarText: {
+    fontSize: '7px',
+    color: '#00f0ff',
+    marginTop: '4px',
+    letterSpacing: '1px',
+    zIndex: 2,
+  },
+  // -----------------------------
   bottomBar: {
     width: '100%',
     backgroundColor: '#050b10',
