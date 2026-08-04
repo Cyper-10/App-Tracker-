@@ -47,9 +47,9 @@ export default function Map() {
           </h3>
         </div>
 
-        {/* Option 1: Cypher Tactical Spy Cam / Radar HUD */}
+        {/* Cypher Tactical Spy Cam / Radar HUD */}
         <div style={styles.radarHud}>
-          {/* Radar Radar Grid Lines */}
+          {/* Radar Grid Lines */}
           <div style={styles.radarGridHorizontal}></div>
           <div style={styles.radarGridVertical}></div>
           
@@ -69,6 +69,7 @@ export default function Map() {
           zoom={3}
           style={{ height: '100%', width: '100%', background: '#08121e' }}
           zoomControl={false}
+          attributionControl={false} /* Method 1: Hides the Leaflet/CARTO attribution box */
         >
           <TileLayer
             attribution='&copy; <a href="https://carto.com/">CARTO</a>'
@@ -154,7 +155,6 @@ const styles = {
     borderRadius: '6px',
     boxShadow: '0 4px 0 #000',
   },
-  // --- Tactical Radar Styles ---
   radarHud: {
     position: 'absolute',
     bottom: '20px',
@@ -196,7 +196,6 @@ const styles = {
     letterSpacing: '1px',
     zIndex: 2,
   },
-  // -----------------------------
   bottomBar: {
     width: '100%',
     backgroundColor: '#050b10',
