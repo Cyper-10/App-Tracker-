@@ -225,7 +225,6 @@ export default function Map() {
 
         {/* Dark Tactical Map */}
         <MapContainer
-          key={deviceCoords ? deviceCoords.join(',') : 'default-map'}
           center={deviceCoords || [10.7202, 122.5621]}
           zoom={3}
           minZoom={2}
@@ -346,10 +345,10 @@ export default function Map() {
       <div className="bottom-bar" style={styles.bottomBar}>
         <div style={styles.tickerTrack}>
           <span style={styles.tickerText}>
-            CYPHER INTEL FEED: ACTIVE NEURAL THEFT SIMULATIONS IN ISTANBUL ■ LOCAL NETWORK STATUS: OPTIMAL ■ RECENT SIGNAL DETECTED AT GRID 10.7202, 122.5621
+            CYPHER INTEL FEED: ACTIVE NEURAL THEFT SIMULATIONS IN ISTANBUL ■ LOCAL NETWORK STATUS: OPTIMAL ■ RECENT SIGNAL DETECTED AT GRID 10.7202, 122.5621 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
           </span>
           <span style={styles.tickerText}>
-            CYPHER INTEL FEED: ACTIVE NEURAL THEFT SIMULATIONS IN ISTANBUL ■ LOCAL NETWORK STATUS: OPTIMAL ■ RECENT SIGNAL DETECTED AT GRID 10.7202, 122.5621
+            CYPHER INTEL FEED: ACTIVE NEURAL THEFT SIMULATIONS IN ISTANBUL ■ LOCAL NETWORK STATUS: OPTIMAL ■ RECENT SIGNAL DETECTED AT GRID 10.7202, 122.5621 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
           </span>
         </div>
 
@@ -613,6 +612,5 @@ const styles = {
     letterSpacing: '1px',
     whiteSpace: 'nowrap',
     fontFamily: 'var(--font-pixel), monospace',
-    paddingRight: '80px',
   },
 };
