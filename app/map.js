@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -23,6 +23,7 @@ const cypher8BitIcon = new L.Icon({
   popupAnchor: [0, -20],
 });
 
+// Helper component to smoothly fly map view
 function MapFlyTo({ coords }) {
   const map = useMap();
   useEffect(() => {
@@ -31,6 +32,21 @@ function MapFlyTo({ coords }) {
     }
   }, [coords, map]);
   return null;
+}
+
+// Distance Helper (Haversine Formula in KM)
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Earth radius in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return (R * c).toFixed(1);
 }
 
 export default function Map() {
@@ -51,31 +67,38 @@ export default function Map() {
     [90, 180],
   ];
 
-  // 1. Fetch Real User Device IP & Geolocation
+  // 1. Precise Geolocation (Prefers Hardware GPS, Falls back to IP Geolocation)
   useEffect(() => {
-    async function getLiveUserIp() {
-      try {
-        const res = await fetch('https://ipapi.co/json/');
-        const data = await res.json();
-        if (data && data.ip) {
-          setUserIp(data.ip);
-          if (data.latitude && data.longitude) {
-            setDeviceCoords([data.latitude, data.longitude]);
-          }
-        }
-      } catch (err) {
-        console.warn('IP Fetch Error:', err);
-        // Fallback to browser HTML5 Geolocation API if IP service is blocked
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            (pos) => setDeviceCoords([pos.coords.latitude, pos.coords.longitude]),
-            (err) => console.warn(err)
-          );
-        }
-      }
-    }
+    // Fetch public IP address for status display
+    fetch('https://ipapi.co/json/')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.ip) setUserIp(data.ip);
+      })
+      .catch((err) => console.warn('IP fetch error:', err));
 
-    getLiveUserIp();
+    // Obtain precise hardware GPS positioning
+    if (navigator.geolocation) {
+      const watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          setDeviceCoords([pos.coords.latitude, pos.coords.longitude]);
+        },
+        async () => {
+          try {
+            const res = await fetch('https://ipapi.co/json/');
+            const data = await res.json();
+            if (data && data.latitude && data.longitude) {
+              setDeviceCoords([data.latitude, data.longitude]);
+            }
+          } catch (e) {
+            console.warn(e);
+          }
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+
+      return () => navigator.geolocation.clearWatch(watchId);
+    }
   }, []);
 
   // 2. Fetch Live Cyber News Broadcasts
@@ -97,7 +120,7 @@ export default function Map() {
     return () => clearInterval(interval);
   }, []);
 
-  // 3. Dynamic Search Handler (Supports Live IP Addresses, Coordinates, or Cities)
+  // 3. Dynamic Search Handler (Supports Live IPs, Coordinates, or Cities)
   const handleSearchLocation = async (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
@@ -125,7 +148,7 @@ export default function Map() {
       return;
     }
 
-    // B. Real IPv4 Address Detection (e.g. "8.8.8.8" or "1.1.1.1")
+    // B. IPv4 Address Detection (e.g. "8.8.8.8")
     const ipMatch = query.match(/^([0-9]{1,3}\.){3}[0-9]{1,3}$/);
     if (ipMatch) {
       try {
@@ -200,7 +223,7 @@ export default function Map() {
     if (deviceCoords) {
       setTargetCoords(deviceCoords);
     } else {
-      alert('ACQUIRING DEVICE SIGNAL...');
+      alert('ACQUIRING GPS SIGNAL...');
     }
   };
 
@@ -222,6 +245,11 @@ export default function Map() {
     setIsModalOpen(false);
     setNewSighting({ type: 'Trapwire', location: '', lat: '', lng: '', note: '' });
   };
+
+  const activeDistance =
+    deviceCoords && targetCoords
+      ? calculateDistance(deviceCoords[0], deviceCoords[1], targetCoords[0], targetCoords[1])
+      : null;
 
   return (
     <div className="outer-frame" style={styles.outerFrame}>
@@ -251,7 +279,7 @@ export default function Map() {
         {/* Dynamic Status Box */}
         <div className="status-box" style={styles.statusBox}>
           <p className="status-text" style={styles.statusText}>
-            SYS.IP // {userIp} | INTEL: {sightings.length}
+            SYS.IP // {userIp} | INTEL: {sightings.length} {activeDistance ? `| RANGE: ${activeDistance} KM` : ''}
           </p>
           
           <div style={styles.controlsRow}>
@@ -271,7 +299,7 @@ export default function Map() {
 
             <div style={styles.btnGroup}>
               <button className="btn-ui" style={styles.homeBtn} onClick={handleJumpToDevice}>
-                MY LOC
+                GPS LOC
               </button>
 
               <button className="btn-ui" style={styles.actionBtn} onClick={() => setIsModalOpen(true)}>
@@ -317,16 +345,25 @@ export default function Map() {
 
           {targetCoords && <MapFlyTo coords={targetCoords} />}
 
+          {/* Device GPS Beacon */}
           {deviceCoords && (
             <Marker position={deviceCoords} icon={liveDevice8BitIcon}>
               <Popup>
                 <div style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: '10px', color: '#111' }}>
-                  📡 <strong>YOUR LIVE IP BEACON</strong><br />
+                  📡 <strong>GPS HARDWARE BEACON</strong><br />
                   IP: {userIp}<br />
                   LAT: {deviceCoords[0].toFixed(4)} | LNG: {deviceCoords[1].toFixed(4)}
                 </div>
               </Popup>
             </Marker>
+          )}
+
+          {/* Target Trajectory Line & Vector Distance */}
+          {deviceCoords && targetCoords && (
+            <Polyline
+              positions={[deviceCoords, targetCoords]}
+              pathOptions={{ color: '#00f0ff', weight: 2, dashArray: '6, 8', opacity: 0.8 }}
+            />
           )}
 
           {sightings.map((s) => (
