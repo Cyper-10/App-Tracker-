@@ -326,7 +326,7 @@ export default function Map() {
 
         {/* Dark Tactical Map */}
         <MapContainer
-          key={deviceCoords ? deviceCoords.join(',') : 'default-map'}
+          key="cypher-map-container"
           center={deviceCoords || [10.7202, 122.5621]}
           zoom={3}
           minZoom={2}
