@@ -350,7 +350,7 @@ export default function Map() {
           </div>
         </div>
 
-        {/* Tactical Weather HUD Widget - Always Rendered */}
+        {/* Tactical Weather HUD Widget */}
         <div className="weather-hud" style={styles.weatherHud}>
           <div className="weather-header" style={styles.weatherHeader}>
             ENV.INTEL // LIVE WX
@@ -359,7 +359,7 @@ export default function Map() {
             <span className="weather-icon">
               {weather ? getWeatherDetails(weather.code).icon : '🌐'}
             </span>
-            <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <strong className="weather-temp" style={{ color: '#00f0ff' }}>
                 {weather ? `${weather.temp}°C` : 'SYNCING...'}
               </strong>
@@ -575,7 +575,7 @@ export default function Map() {
             /* Weather HUD Scaling */
             .weather-hud {
               padding: 10px 14px !important;
-              min-width: 200px !important;
+              min-width: 240px !important;
               top: 100px !important;
               left: 16px !important;
               gap: 4px !important;
@@ -592,7 +592,7 @@ export default function Map() {
             }
             .weather-cond {
               font-size: 11px !important;
-              margin-left: 6px !important;
+              margin-left: 8px !important;
             }
             .weather-subtext {
               font-size: 9px !important;
@@ -763,7 +763,7 @@ const styles = {
   weatherBody: {
     display: 'flex',
     alignItems: 'center',
-    gap: '6px',
+    gap: '8px',
     marginTop: '2px',
   },
   weatherSubtext: {
