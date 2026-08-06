@@ -353,19 +353,19 @@ export default function Map() {
         {/* Tactical Weather HUD Widget */}
         {weather && (
           <div className="weather-hud" style={styles.weatherHud}>
-            <div style={styles.weatherHeader}>
+            <div className="weather-header" style={styles.weatherHeader}>
               ENV.INTEL // LIVE WX
             </div>
-            <div style={styles.weatherBody}>
-              <span style={{ fontSize: '14px' }}>{getWeatherDetails(weather.code).icon}</span>
+            <div className="weather-body" style={styles.weatherBody}>
+              <span className="weather-icon">{getWeatherDetails(weather.code).icon}</span>
               <div>
-                <strong style={{ color: '#00f0ff', fontSize: '10px' }}>{weather.temp}°C</strong>
-                <span style={{ color: '#00a8ff', fontSize: '7px', marginLeft: '4px' }}>
+                <strong className="weather-temp" style={{ color: '#00f0ff' }}>{weather.temp}°C</strong>
+                <span className="weather-cond" style={{ color: '#00a8ff' }}>
                   {getWeatherDetails(weather.code).cond}
                 </span>
               </div>
             </div>
-            <div style={styles.weatherSubtext}>
+            <div className="weather-subtext" style={styles.weatherSubtext}>
               WIND: {weather.wind} KM/H | HUM: {weather.humidity}%
             </div>
           </div>
@@ -529,6 +529,55 @@ export default function Map() {
             }
             100% {
               transform: translateX(-50%);
+            }
+          }
+
+          /* Desktop Responsive Scaling */
+          @media (min-width: 768px) {
+            /* Status Control Panel Scaling */
+            .status-box {
+              max-width: 620px !important;
+              padding: 10px 16px !important;
+              top: 14px !important;
+            }
+            .status-text {
+              font-size: 12px !important;
+              margin-bottom: 8px !important;
+            }
+            .search-input {
+              font-size: 11px !important;
+              padding: 6px 10px !important;
+            }
+            .btn-ui {
+              font-size: 11px !important;
+              padding: 6px 12px !important;
+            }
+
+            /* Weather HUD Scaling */
+            .weather-hud {
+              padding: 10px 14px !important;
+              min-width: 200px !important;
+              top: 100px !important;
+              left: 16px !important;
+              gap: 4px !important;
+            }
+            .weather-header {
+              font-size: 10px !important;
+              padding-bottom: 4px !important;
+            }
+            .weather-icon {
+              font-size: 22px !important;
+            }
+            .weather-temp {
+              font-size: 16px !important;
+            }
+            .weather-cond {
+              font-size: 11px !important;
+              margin-left: 6px !important;
+            }
+            .weather-subtext {
+              font-size: 9px !important;
+              margin-top: 4px !important;
             }
           }
         `}</style>
