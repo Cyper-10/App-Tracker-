@@ -136,13 +136,10 @@ export default function Map() {
     return () => clearInterval(interval);
   }, []);
 
-  // 3. Fetch Live Weather using Open-Meteo API whenever deviceCoords update
+  // 3. Fetch Live Weather immediately using deviceCoords or default fallback
   useEffect(() => {
-    if (!deviceCoords) return;
-
-    async function fetchTacticalWeather() {
+    async function fetchTacticalWeather(lat, lng) {
       try {
-        const [lat, lng] = deviceCoords;
         const res = await fetch(
           `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m`
         );
@@ -160,7 +157,8 @@ export default function Map() {
       }
     }
 
-    fetchTacticalWeather();
+    const [lat, lng] = deviceCoords || [10.7202, 122.5621];
+    fetchTacticalWeather(lat, lng);
   }, [deviceCoords]);
 
   // 4. Dynamic Search Handler (Supports Live IPs, Coordinates, or Cities)
@@ -352,26 +350,30 @@ export default function Map() {
           </div>
         </div>
 
-        {/* Tactical Weather HUD Widget */}
-        {weather && (
-          <div className="weather-hud" style={styles.weatherHud}>
-            <div className="weather-header" style={styles.weatherHeader}>
-              ENV.INTEL // LIVE WX
-            </div>
-            <div className="weather-body" style={styles.weatherBody}>
-              <span className="weather-icon">{getWeatherDetails(weather.code).icon}</span>
-              <div>
-                <strong className="weather-temp" style={{ color: '#00f0ff' }}>{weather.temp}°C</strong>
-                <span className="weather-cond" style={{ color: '#00a8ff' }}>
-                  {getWeatherDetails(weather.code).cond}
-                </span>
-              </div>
-            </div>
-            <div className="weather-subtext" style={styles.weatherSubtext}>
-              WIND: {weather.wind} KM/H | HUM: {weather.humidity}%
+        {/* Tactical Weather HUD Widget - Always Rendered */}
+        <div className="weather-hud" style={styles.weatherHud}>
+          <div className="weather-header" style={styles.weatherHeader}>
+            ENV.INTEL // LIVE WX
+          </div>
+          <div className="weather-body" style={styles.weatherBody}>
+            <span className="weather-icon">
+              {weather ? getWeatherDetails(weather.code).icon : '🌐'}
+            </span>
+            <div>
+              <strong className="weather-temp" style={{ color: '#00f0ff' }}>
+                {weather ? `${weather.temp}°C` : 'SYNCING...'}
+              </strong>
+              <span className="weather-cond" style={{ color: '#00a8ff' }}>
+                {weather ? getWeatherDetails(weather.code).cond : 'ACQUIRING TELEMETRY'}
+              </span>
             </div>
           </div>
-        )}
+          <div className="weather-subtext" style={styles.weatherSubtext}>
+            {weather
+              ? `WIND: ${weather.wind} KM/H | HUM: ${weather.humidity}%`
+              : 'INITIALIZING SENSOR MATRIX...'}
+          </div>
+        </div>
 
         {/* Tactical Radar HUD */}
         <div className="radar-hud" style={styles.radarHud}>
@@ -534,7 +536,7 @@ export default function Map() {
             }
           }
 
-          /* Isolate marker layer completely to remove cyan background glow */
+          /* Isolate marker layer completely to remove background glow bleeds */
           :global(.leaflet-marker-pane) {
             mix-blend-mode: normal !important;
             filter: none !important;
