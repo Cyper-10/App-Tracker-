@@ -62,10 +62,24 @@ export default function Map() {
 
   const [newsFeed, setNewsFeed] = useState('FETCHING LIVE CYPHER INTEL...');
 
+  // Weather State Data
+  const [weather, setWeather] = useState(null);
+
   const outerWorldBounds = [
     [-90, -180],
     [90, 180],
   ];
+
+  // Map Open-Meteo Weather Codes to Retro Descriptions & Icons
+  const getWeatherDetails = (code) => {
+    if (code === 0) return { cond: 'CLEAR SKIES', icon: '☀️' };
+    if (code >= 1 && code <= 3) return { cond: 'PARTLY CLOUDY', icon: '⛅' };
+    if (code >= 45 && code <= 48) return { cond: 'FOGGY GRID', icon: '🌫️' };
+    if (code >= 51 && code <= 67) return { cond: 'LIGHT RAIN', icon: '🌧️' };
+    if (code >= 80 && code <= 82) return { cond: 'HEAVY RAIN', icon: '⛈️' };
+    if (code >= 95) return { cond: 'THUNDERSTORM', icon: '⚡' };
+    return { cond: 'ATMOSPHERIC DATA', icon: '🌐' };
+  };
 
   // 1. Precise Geolocation (Prefers Hardware GPS, Falls back to IP Geolocation)
   useEffect(() => {
@@ -120,7 +134,34 @@ export default function Map() {
     return () => clearInterval(interval);
   }, []);
 
-  // 3. Dynamic Search Handler (Supports Live IPs, Coordinates, or Cities)
+  // 3. Fetch Live Weather using Open-Meteo API whenever deviceCoords update
+  useEffect(() => {
+    if (!deviceCoords) return;
+
+    async function fetchTacticalWeather() {
+      try {
+        const [lat, lng] = deviceCoords;
+        const res = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m`
+        );
+        const data = await res.json();
+        if (data && data.current) {
+          setWeather({
+            temp: Math.round(data.current.temperature_2m),
+            humidity: data.current.relative_humidity_2m,
+            wind: Math.round(data.current.wind_speed_10m),
+            code: data.current.weather_code,
+          });
+        }
+      } catch (err) {
+        console.warn('Weather fetch error:', err);
+      }
+    }
+
+    fetchTacticalWeather();
+  }, [deviceCoords]);
+
+  // 4. Dynamic Search Handler (Supports Live IPs, Coordinates, or Cities)
   const handleSearchLocation = async (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
@@ -308,6 +349,27 @@ export default function Map() {
             </div>
           </div>
         </div>
+
+        {/* Tactical Weather HUD Widget */}
+        {weather && (
+          <div className="weather-hud" style={styles.weatherHud}>
+            <div style={styles.weatherHeader}>
+              ENV.INTEL // LIVE WX
+            </div>
+            <div style={styles.weatherBody}>
+              <span style={{ fontSize: '14px' }}>{getWeatherDetails(weather.code).icon}</span>
+              <div>
+                <strong style={{ color: '#00f0ff', fontSize: '10px' }}>{weather.temp}°C</strong>
+                <span style={{ color: '#00a8ff', fontSize: '7px', marginLeft: '4px' }}>
+                  {getWeatherDetails(weather.code).cond}
+                </span>
+              </div>
+            </div>
+            <div style={styles.weatherSubtext}>
+              WIND: {weather.wind} KM/H | HUM: {weather.humidity}%
+            </div>
+          </div>
+        )}
 
         {/* Tactical Radar HUD */}
         <div className="radar-hud" style={styles.radarHud}>
@@ -606,6 +668,41 @@ const styles = {
     cursor: 'pointer',
     fontWeight: 'bold',
     whiteSpace: 'nowrap',
+  },
+  weatherHud: {
+    position: 'absolute',
+    top: '70px',
+    left: '12px',
+    zIndex: 1000,
+    backgroundColor: 'rgba(5, 20, 35, 0.9)',
+    border: '2px solid #00f0ff',
+    borderRadius: '6px',
+    padding: '6px 8px',
+    boxShadow: '0 4px 0 #000',
+    pointerEvents: 'none',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2px',
+    minWidth: '130px',
+  },
+  weatherHeader: {
+    fontSize: '6px',
+    color: '#00a8ff',
+    letterSpacing: '1px',
+    borderBottom: '1px solid rgba(0, 240, 255, 0.3)',
+    paddingBottom: '2px',
+  },
+  weatherBody: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    marginTop: '2px',
+  },
+  weatherSubtext: {
+    fontSize: '6px',
+    color: '#00f0ff',
+    marginTop: '2px',
+    letterSpacing: '0.5px',
   },
   radarHud: {
     position: 'absolute',
