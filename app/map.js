@@ -14,6 +14,7 @@ const liveDevice8BitIcon = new L.Icon({
   iconSize: [40, 40],
   iconAnchor: [20, 20],
   popupAnchor: [0, -20],
+  className: 'clean-cypher-icon',
 });
 
 const cypher8BitIcon = new L.Icon({
@@ -21,6 +22,7 @@ const cypher8BitIcon = new L.Icon({
   iconSize: [40, 40],
   iconAnchor: [20, 20],
   popupAnchor: [0, -20],
+  className: 'clean-cypher-icon',
 });
 
 // Helper component to smoothly fly map view
@@ -530,6 +532,21 @@ export default function Map() {
             100% {
               transform: translateX(-50%);
             }
+          }
+
+          /* Isolate marker layer completely to remove cyan background glow */
+          :global(.leaflet-marker-pane) {
+            mix-blend-mode: normal !important;
+            filter: none !important;
+          }
+
+          :global(.leaflet-marker-icon),
+          :global(.clean-cypher-icon) {
+            background: transparent !important;
+            box-shadow: none !important;
+            border: none !important;
+            outline: none !important;
+            filter: none !important;
           }
 
           /* Desktop Responsive Scaling */
