@@ -25,14 +25,22 @@ const cypher8BitIcon = new L.Icon({
   className: 'clean-cypher-icon',
 });
 
-// Helper component to smoothly fly map view
-function MapFlyTo({ coords }) {
+// Auto-follow component: smooth pan on every device movement & initial target set
+function MapAutoFollow({ coords, targetCoords, isAutoFollow }) {
   const map = useMap();
+
   useEffect(() => {
-    if (coords) {
-      map.flyTo(coords, 10, { duration: 1.5 });
+    if (isAutoFollow && coords) {
+      map.panTo(coords, { animate: true, duration: 1 });
     }
-  }, [coords, map]);
+  }, [coords, isAutoFollow, map]);
+
+  useEffect(() => {
+    if (targetCoords) {
+      map.flyTo(targetCoords, 16, { duration: 1.5 });
+    }
+  }, [targetCoords, map]);
+
   return null;
 }
 
@@ -58,13 +66,13 @@ export default function Map() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [targetCoords, setTargetCoords] = useState(null);
+  const [routePath, setRoutePath] = useState([]);
+  const [isAutoFollow, setIsAutoFollow] = useState(true);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newSighting, setNewSighting] = useState({ type: 'Trapwire', location: '', lat: '', lng: '', note: '' });
 
   const [newsFeed, setNewsFeed] = useState('FETCHING LIVE CYPHER INTEL...');
-
-  // Weather State Data
   const [weather, setWeather] = useState(null);
 
   const outerWorldBounds = [
@@ -72,7 +80,6 @@ export default function Map() {
     [90, 180],
   ];
 
-  // Map Open-Meteo Weather Codes to Retro Descriptions & Icons
   const getWeatherDetails = (code) => {
     if (code === 0) return { cond: 'CLEAR SKIES', icon: '☀️' };
     if (code >= 1 && code <= 3) return { cond: 'PARTLY CLOUDY', icon: '⛅' };
@@ -83,9 +90,8 @@ export default function Map() {
     return { cond: 'ATMOSPHERIC DATA', icon: '🌐' };
   };
 
-  // 1. Precise Geolocation (Prefers Hardware GPS, Falls back to IP Geolocation)
+  // 1. Precise Geolocation Watcher
   useEffect(() => {
-    // Fetch public IP address for status display
     fetch('https://ipapi.co/json/')
       .then((res) => res.json())
       .then((data) => {
@@ -93,7 +99,6 @@ export default function Map() {
       })
       .catch((err) => console.warn('IP fetch error:', err));
 
-    // Obtain precise hardware GPS positioning
     if (navigator.geolocation) {
       const watchId = navigator.geolocation.watchPosition(
         (pos) => {
@@ -136,7 +141,7 @@ export default function Map() {
     return () => clearInterval(interval);
   }, []);
 
-  // 3. Fetch Live Weather immediately using deviceCoords or default fallback
+  // 3. Fetch Live Weather
   useEffect(() => {
     async function fetchTacticalWeather(lat, lng) {
       try {
@@ -161,7 +166,34 @@ export default function Map() {
     fetchTacticalWeather(lat, lng);
   }, [deviceCoords]);
 
-  // 4. Dynamic Search Handler (Supports Live IPs, Coordinates, or Cities)
+  // 4. Fetch Road Route Geometry via OSRM when target or position updates
+  useEffect(() => {
+    if (!deviceCoords || !targetCoords) {
+      setRoutePath([]);
+      return;
+    }
+
+    async function fetchRoadRoute() {
+      try {
+        const url = `https://router.project-osrm.org/route/v1/driving/${deviceCoords[1]},${deviceCoords[0]};${targetCoords[1]},${targetCoords[0]}?overview=full&geometries=geojson`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.routes && data.routes.length > 0) {
+          const coords = data.routes[0].geometry.coordinates.map((c) => [c[1], c[0]]);
+          setRoutePath(coords);
+        } else {
+          setRoutePath([deviceCoords, targetCoords]);
+        }
+      } catch (err) {
+        console.warn('Routing Error:', err);
+        setRoutePath([deviceCoords, targetCoords]);
+      }
+    }
+
+    fetchRoadRoute();
+  }, [deviceCoords, targetCoords]);
+
+  // 5. Dynamic Search Handler
   const handleSearchLocation = async (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
@@ -169,7 +201,6 @@ export default function Map() {
     setIsSearching(true);
     const query = searchQuery.trim();
 
-    // A. Direct Lat, Lng Coordinates (e.g. "10.72, 122.56")
     const coordMatch = query.match(/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/);
     if (coordMatch) {
       const lat = parseFloat(coordMatch[1]);
@@ -189,7 +220,6 @@ export default function Map() {
       return;
     }
 
-    // B. IPv4 Address Detection (e.g. "8.8.8.8")
     const ipMatch = query.match(/^([0-9]{1,3}\.){3}[0-9]{1,3}$/);
     if (ipMatch) {
       try {
@@ -226,7 +256,6 @@ export default function Map() {
       return;
     }
 
-    // C. OpenStreetMap City/Name Search Fallback
     try {
       const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
       const data = await res.json();
@@ -262,6 +291,7 @@ export default function Map() {
 
   const handleJumpToDevice = () => {
     if (deviceCoords) {
+      setIsAutoFollow(true);
       setTargetCoords(deviceCoords);
     } else {
       alert('ACQUIRING GPS SIGNAL...');
@@ -394,7 +424,7 @@ export default function Map() {
         <MapContainer
           key="cypher-map-container"
           center={deviceCoords || [10.7202, 122.5621]}
-          zoom={3}
+          zoom={16}
           minZoom={2}
           maxBounds={outerWorldBounds}
           maxBoundsViscosity={1.0}
@@ -409,7 +439,11 @@ export default function Map() {
             bounds={outerWorldBounds}
           />
 
-          {targetCoords && <MapFlyTo coords={targetCoords} />}
+          <MapAutoFollow
+            coords={deviceCoords}
+            targetCoords={targetCoords}
+            isAutoFollow={isAutoFollow}
+          />
 
           {/* Device GPS Beacon */}
           {deviceCoords && (
@@ -424,11 +458,11 @@ export default function Map() {
             </Marker>
           )}
 
-          {/* Target Trajectory Line & Vector Distance */}
-          {deviceCoords && targetCoords && (
+          {/* Road Path Trajectory */}
+          {routePath.length > 0 && (
             <Polyline
-              positions={[deviceCoords, targetCoords]}
-              pathOptions={{ color: '#00f0ff', weight: 2, dashArray: '6, 8', opacity: 0.8 }}
+              positions={routePath}
+              pathOptions={{ color: '#00f0ff', weight: 4, dashArray: '6, 8', opacity: 0.8 }}
             />
           )}
 
@@ -536,7 +570,6 @@ export default function Map() {
             }
           }
 
-          /* Isolate marker layer completely to remove background glow bleeds */
           :global(.leaflet-marker-pane) {
             mix-blend-mode: normal !important;
             filter: none !important;
@@ -551,9 +584,7 @@ export default function Map() {
             filter: none !important;
           }
 
-          /* Desktop Responsive Scaling */
           @media (min-width: 768px) {
-            /* Status Control Panel Scaling */
             .status-box {
               max-width: 620px !important;
               padding: 10px 16px !important;
@@ -572,7 +603,6 @@ export default function Map() {
               padding: 6px 12px !important;
             }
 
-            /* Weather HUD Scaling */
             .weather-hud {
               padding: 10px 14px !important;
               min-width: 240px !important;
