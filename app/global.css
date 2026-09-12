@@ -1,3 +1,13 @@
+/* ROOT VIEWPORT & FULLSCREEN LOCK */
+html, body {
+  width: 100vw;
+  height: 100dvh; /* Dynamic viewport height prevents address bar layout shifts */
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: #0a141d;
+}
+
 /* DESKTOP ENHANCEMENTS (768px and wider) */
 @media (min-width: 768px) {
   /* Header Bar */
