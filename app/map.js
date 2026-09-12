@@ -3,27 +3,6 @@
 import { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
-
-// ----------------------------------------------------
-// RETRO 8-BIT / PIXEL ART ICONS
-// ----------------------------------------------------
-
-const liveDevice8BitIcon = new L.Icon({
-  iconUrl: '/cypher.png',
-  iconSize: [40, 40],
-  iconAnchor: [20, 20],
-  popupAnchor: [0, -20],
-  className: 'clean-cypher-icon',
-});
-
-const cypher8BitIcon = new L.Icon({
-  iconUrl: '/cypher.png',
-  iconSize: [40, 40],
-  iconAnchor: [20, 20],
-  popupAnchor: [0, -20],
-  className: 'clean-cypher-icon',
-});
 
 // Auto-follow component: smooth pan on every device movement & initial target set
 function MapAutoFollow({ coords, targetCoords, isAutoFollow }) {
@@ -74,11 +53,35 @@ export default function Map() {
 
   const [newsFeed, setNewsFeed] = useState('FETCHING LIVE CYPHER INTEL...');
   const [weather, setWeather] = useState(null);
+  const [leafletIcons, setLeafletIcons] = useState({ liveIcon: null, sightingIcon: null });
 
   const outerWorldBounds = [
     [-90, -180],
     [90, 180],
   ];
+
+  // Initialize Leaflet Icons on Client Side safely
+  useEffect(() => {
+    import('leaflet').then((L) => {
+      const liveIcon = new L.Icon({
+        iconUrl: '/cypher.png',
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
+        popupAnchor: [0, -20],
+        className: 'clean-cypher-icon',
+      });
+
+      const sightingIcon = new L.Icon({
+        iconUrl: '/cypher.png',
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
+        popupAnchor: [0, -20],
+        className: 'clean-cypher-icon',
+      });
+
+      setLeafletIcons({ liveIcon, sightingIcon });
+    });
+  }, []);
 
   const getWeatherDetails = (code) => {
     if (code === 0) return { cond: 'CLEAR SKIES', icon: '☀️' };
@@ -422,7 +425,6 @@ export default function Map() {
 
         {/* Dark Tactical Map */}
         <MapContainer
-          key="cypher-map-container"
           center={deviceCoords || [10.7202, 122.5621]}
           zoom={16}
           minZoom={2}
@@ -446,8 +448,8 @@ export default function Map() {
           />
 
           {/* Device GPS Beacon */}
-          {deviceCoords && (
-            <Marker position={deviceCoords} icon={liveDevice8BitIcon}>
+          {deviceCoords && leafletIcons.liveIcon && (
+            <Marker position={deviceCoords} icon={leafletIcons.liveIcon}>
               <Popup>
                 <div style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: '10px', color: '#111' }}>
                   📡 <strong>GPS HARDWARE BEACON</strong><br />
@@ -467,7 +469,11 @@ export default function Map() {
           )}
 
           {sightings.map((s) => (
-            <Marker key={s.id} position={[s.lat, s.lng]} icon={cypher8BitIcon}>
+            <Marker 
+              key={s.id} 
+              position={[s.lat, s.lng]} 
+              {...(leafletIcons.sightingIcon ? { icon: leafletIcons.sightingIcon } : {})}
+            >
               <Popup>
                 <div style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: '10px', color: '#111', minWidth: '120px' }}>
                   <strong>[{s.type.toUpperCase()}] DETECTED</strong><br />
@@ -645,7 +651,7 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justify: 'space-between',
     fontFamily: 'var(--font-pixel), monospace',
     overflow: 'hidden',
   },
