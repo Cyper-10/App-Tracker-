@@ -645,7 +645,7 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justify: 'space-between',
     fontFamily: 'var(--font-pixel), monospace',
     overflow: 'hidden',
   },
