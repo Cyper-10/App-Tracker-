@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -407,20 +407,6 @@ export default function Map() {
             setIsAutoFollow={setIsAutoFollow}
           />
 
-          {deviceCoords && accuracyRadius && (
-            <Circle
-              center={deviceCoords}
-              radius={accuracyRadius}
-              pathOptions={{
-                color: '#00f0ff',
-                fillColor: '#00f0ff',
-                fillOpacity: 0.1,
-                weight: 1,
-                dashArray: '4, 4',
-              }}
-            />
-          )}
-
           {deviceCoords && (
             <Marker position={deviceCoords} icon={liveDevice8BitIcon}>
               <Popup>
@@ -601,7 +587,7 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyIn: 'space-between',
     fontFamily: 'monospace',
     overflow: 'hidden',
   },
