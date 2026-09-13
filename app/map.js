@@ -1,31 +1,29 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
 // ----------------------------------------------------
-// RETRO 8-BIT / PIXEL ART ICONS
+// RETRO 8-BIT / PIXEL ART ICONS (Fixed Anchor Points)
 // ----------------------------------------------------
 
 const liveDevice8BitIcon = new L.Icon({
   iconUrl: '/cypher.png',
-  iconSize: [40, 40],
-  iconAnchor: [20, 20],
-  popupAnchor: [0, -20],
-  className: 'clean-cypher-icon',
+  iconSize: [36, 36],
+  iconAnchor: [18, 18],
+  popupAnchor: [0, -18],
 });
 
 const cypher8BitIcon = new L.Icon({
   iconUrl: '/cypher.png',
-  iconSize: [40, 40],
-  iconAnchor: [20, 20],
-  popupAnchor: [0, -20],
-  className: 'clean-cypher-icon',
+  iconSize: [36, 36],
+  iconAnchor: [18, 18],
+  popupAnchor: [0, -18],
 });
 
-// Auto-follow component: smooth pan on every device movement & initial target set
+// Auto-follow component: smooth pan on device movement & target selection
 function MapAutoFollow({ coords, targetCoords, isAutoFollow }) {
   const map = useMap();
 
@@ -46,7 +44,7 @@ function MapAutoFollow({ coords, targetCoords, isAutoFollow }) {
 
 // Distance Helper (Haversine Formula in KM)
 function calculateDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371; // Earth radius in km
+  const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const a =
@@ -61,6 +59,8 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 
 export default function Map() {
   const [deviceCoords, setDeviceCoords] = useState(null);
+  const [accuracyRadius, setAccuracyRadius] = useState(null);
+  const [isGpsHardware, setIsGpsHardware] = useState(false);
   const [userIp, setUserIp] = useState('ACQUIRING...');
   const [sightings, setSightings] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -90,7 +90,7 @@ export default function Map() {
     return { cond: 'ATMOSPHERIC DATA', icon: '🌐' };
   };
 
-  // 1. Precise Geolocation Watcher
+  // 1. Precise Geolocation Watcher (Hardware First, IP Secondary)
   useEffect(() => {
     fetch('https://ipapi.co/json/')
       .then((res) => res.json())
@@ -103,26 +103,31 @@ export default function Map() {
       const watchId = navigator.geolocation.watchPosition(
         (pos) => {
           setDeviceCoords([pos.coords.latitude, pos.coords.longitude]);
+          setAccuracyRadius(pos.coords.accuracy);
+          setIsGpsHardware(true);
         },
         async () => {
+          // Fallback only if browser GPS fails or user denies permissions
+          setIsGpsHardware(false);
           try {
             const res = await fetch('https://ipapi.co/json/');
             const data = await res.json();
             if (data && data.latitude && data.longitude) {
               setDeviceCoords([data.latitude, data.longitude]);
+              setAccuracyRadius(null);
             }
           } catch (e) {
             console.warn(e);
           }
         },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        { enableHighAccuracy: true, timeout: 30000, maximumAge: 5000 }
       );
 
       return () => navigator.geolocation.clearWatch(watchId);
     }
   }, []);
 
-  // 2. Fetch Live Cyber News Broadcasts
+  // 2. Cyber News Broadcasts
   useEffect(() => {
     async function fetchRealNews() {
       try {
@@ -131,7 +136,6 @@ export default function Map() {
         const data = await res.json();
         if (data.newsText) setNewsFeed(data.newsText);
       } catch (err) {
-        console.warn('News Feed Error:', err);
         setNewsFeed('CYPHER INTEL FEED: NETWORK OFFLINE ■ LOCAL BACKUP ACTIVE');
       }
     }
@@ -141,8 +145,9 @@ export default function Map() {
     return () => clearInterval(interval);
   }, []);
 
-  // 3. Fetch Live Weather
+  // 3. Live Weather Telemetry
   useEffect(() => {
+    if (!deviceCoords) return;
     async function fetchTacticalWeather(lat, lng) {
       try {
         const res = await fetch(
@@ -162,11 +167,10 @@ export default function Map() {
       }
     }
 
-    const [lat, lng] = deviceCoords || [10.7202, 122.5621];
-    fetchTacticalWeather(lat, lng);
+    fetchTacticalWeather(deviceCoords[0], deviceCoords[1]);
   }, [deviceCoords]);
 
-  // 4. Fetch Road Route Geometry via OSRM when target or position updates
+  // 4. Road Route Geometry via OSRM
   useEffect(() => {
     if (!deviceCoords || !targetCoords) {
       setRoutePath([]);
@@ -185,7 +189,6 @@ export default function Map() {
           setRoutePath([deviceCoords, targetCoords]);
         }
       } catch (err) {
-        console.warn('Routing Error:', err);
         setRoutePath([deviceCoords, targetCoords]);
       }
     }
@@ -231,7 +234,6 @@ export default function Map() {
           const lng = parseFloat(data.longitude);
           const city = data.city || 'Unknown';
           const country = data.country_name || '';
-          const isp = data.org || data.asn || 'Unknown ISP';
 
           const newPin = {
             id: Date.now(),
@@ -239,7 +241,7 @@ export default function Map() {
             lat,
             lng,
             location: `${city}, ${country}`,
-            note: `ISP/ORG: ${isp} | REGION: ${data.region || 'N/A'}`,
+            note: `ISP/ORG: ${data.org || 'Unknown ISP'}`,
           };
 
           setSightings((prev) => [...prev, newPin]);
@@ -248,7 +250,6 @@ export default function Map() {
           alert(`CYPHER NETWORK UNABLE TO LOCATE IP: ${query}`);
         }
       } catch (err) {
-        console.error('IP Search Error:', err);
         alert('IP GEOLOCATION SERVICE UNREACHABLE');
       } finally {
         setIsSearching(false);
@@ -347,17 +348,17 @@ export default function Map() {
       <div style={styles.monitorContainer}>
         <div className="crt-overlay"></div>
 
-        {/* Dynamic Status Box */}
+        {/* Floating Top Control Panel */}
         <div className="status-box" style={styles.statusBox}>
           <p className="status-text" style={styles.statusText}>
-            SYS.IP // {userIp} | INTEL: {sightings.length} {activeDistance ? `| RANGE: ${activeDistance} KM` : ''}
+            SYS.IP // {userIp} | INTEL: {sightings.length} | MODE: {isGpsHardware ? 'GPS (HARDWARE)' : 'IP (ESTIMATED)'} {activeDistance ? `| RANGE: ${activeDistance} KM` : ''}
           </p>
           
           <div style={styles.controlsRow}>
             <form onSubmit={handleSearchLocation} style={styles.searchForm}>
               <input
                 type="text"
-                placeholder="Enter IP (e.g. 8.8.8.8), City, or Lat, Lng..."
+                placeholder="IP, City, or Lat, Lng..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="search-input"
@@ -380,28 +381,28 @@ export default function Map() {
           </div>
         </div>
 
-        {/* Tactical Weather HUD Widget */}
+        {/* Weather HUD Widget */}
         <div className="weather-hud" style={styles.weatherHud}>
           <div className="weather-header" style={styles.weatherHeader}>
             ENV.INTEL // LIVE WX
           </div>
           <div className="weather-body" style={styles.weatherBody}>
-            <span className="weather-icon">
+            <span className="weather-icon" style={{ fontSize: '18px' }}>
               {weather ? getWeatherDetails(weather.code).icon : '🌐'}
             </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <strong className="weather-temp" style={{ color: '#00f0ff' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <strong className="weather-temp" style={{ color: '#00f0ff', fontSize: '13px' }}>
                 {weather ? `${weather.temp}°C` : 'SYNCING...'}
               </strong>
-              <span className="weather-cond" style={{ color: '#00a8ff' }}>
-                {weather ? getWeatherDetails(weather.code).cond : 'ACQUIRING TELEMETRY'}
+              <span className="weather-cond" style={{ color: '#00a8ff', fontSize: '10px' }}>
+                {weather ? getWeatherDetails(weather.code).cond : 'TELEMETRY'}
               </span>
             </div>
           </div>
           <div className="weather-subtext" style={styles.weatherSubtext}>
             {weather
               ? `WIND: ${weather.wind} KM/H | HUM: ${weather.humidity}%`
-              : 'INITIALIZING SENSOR MATRIX...'}
+              : 'INITIALIZING MATRIX...'}
           </div>
         </div>
 
@@ -410,17 +411,10 @@ export default function Map() {
           <div style={styles.radarGridHorizontal}></div>
           <div style={styles.radarGridVertical}></div>
           <div className="radar-sweep-line"></div>
-          
-          <img 
-            src="https://api.iconify.design/pixelarticons:eye.svg?color=%2300f0ff" 
-            alt="Radar" 
-            className="radar-icon"
-            style={{ width: '22px', height: '22px', zIndex: 2 }} 
-          />
           <span className="radar-text" style={styles.radarText}>RADAR</span>
         </div>
 
-        {/* Dark Tactical Map */}
+        {/* Tactical Leaflet Map */}
         <MapContainer
           key="cypher-map-container"
           center={deviceCoords || [10.7202, 122.5621]}
@@ -445,12 +439,28 @@ export default function Map() {
             isAutoFollow={isAutoFollow}
           />
 
-          {/* Device GPS Beacon */}
+          {/* GPS Hardware Precision Accuracy Circle */}
+          {deviceCoords && accuracyRadius && (
+            <Circle
+              center={deviceCoords}
+              radius={accuracyRadius}
+              pathOptions={{
+                color: '#00f0ff',
+                fillColor: '#00f0ff',
+                fillOpacity: 0.1,
+                weight: 1,
+                dashArray: '4, 4',
+              }}
+            />
+          )}
+
+          {/* Device Location Marker */}
           {deviceCoords && (
             <Marker position={deviceCoords} icon={liveDevice8BitIcon}>
               <Popup>
                 <div style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: '10px', color: '#111' }}>
-                  📡 <strong>GPS HARDWARE BEACON</strong><br />
+                  📡 <strong>BEACON ACTIVE</strong><br />
+                  MODE: {isGpsHardware ? 'GPS HARDWARE' : 'IP NETWORK'}<br />
                   IP: {userIp}<br />
                   LAT: {deviceCoords[0].toFixed(4)} | LNG: {deviceCoords[1].toFixed(4)}
                 </div>
@@ -458,11 +468,11 @@ export default function Map() {
             </Marker>
           )}
 
-          {/* Road Path Trajectory */}
+          {/* Road Path Geometry */}
           {routePath.length > 0 && (
             <Polyline
               positions={routePath}
-              pathOptions={{ color: '#00f0ff', weight: 4, dashArray: '6, 8', opacity: 0.8 }}
+              pathOptions={{ color: '#00f0ff', weight: 3, dashArray: '6, 8', opacity: 0.85 }}
             />
           )}
 
@@ -506,7 +516,7 @@ export default function Map() {
               <form onSubmit={handleAddSighting} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <input
                   type="text"
-                  placeholder="Location Name (e.g. Manila)"
+                  placeholder="Location Name"
                   value={newSighting.location}
                   onChange={(e) => setNewSighting({ ...newSighting, location: e.target.value })}
                   style={styles.modalInput}
@@ -553,84 +563,76 @@ export default function Map() {
         )}
       </div>
 
-      {/* Dynamic Live Broadcast Marquee Feed */}
+      {/* Marquee Feed Bar */}
       <div className="bottom-bar" style={styles.bottomBar}>
         <div style={styles.tickerTrack}>
           <span style={styles.tickerText}>{newsFeed}</span>
           <span style={styles.tickerText}>{newsFeed}</span>
         </div>
-
-        <style jsx>{`
-          @keyframes smoothTicker {
-            0% {
-              transform: translateX(0%);
-            }
-            100% {
-              transform: translateX(-50%);
-            }
-          }
-
-          :global(.leaflet-marker-pane) {
-            mix-blend-mode: normal !important;
-            filter: none !important;
-          }
-
-          :global(.leaflet-marker-icon),
-          :global(.clean-cypher-icon) {
-            background: transparent !important;
-            box-shadow: none !important;
-            border: none !important;
-            outline: none !important;
-            filter: none !important;
-          }
-
-          @media (min-width: 768px) {
-            .status-box {
-              max-width: 620px !important;
-              padding: 10px 16px !important;
-              top: 14px !important;
-            }
-            .status-text {
-              font-size: 12px !important;
-              margin-bottom: 8px !important;
-            }
-            .search-input {
-              font-size: 11px !important;
-              padding: 6px 10px !important;
-            }
-            .btn-ui {
-              font-size: 11px !important;
-              padding: 6px 12px !important;
-            }
-
-            .weather-hud {
-              padding: 10px 14px !important;
-              min-width: 240px !important;
-              top: 100px !important;
-              left: 16px !important;
-              gap: 4px !important;
-            }
-            .weather-header {
-              font-size: 10px !important;
-              padding-bottom: 4px !important;
-            }
-            .weather-icon {
-              font-size: 22px !important;
-            }
-            .weather-temp {
-              font-size: 16px !important;
-            }
-            .weather-cond {
-              font-size: 11px !important;
-              margin-left: 8px !important;
-            }
-            .weather-subtext {
-              font-size: 9px !important;
-              margin-top: 4px !important;
-            }
-          }
-        `}</style>
       </div>
+
+      <style jsx>{`
+        @keyframes smoothTicker {
+          0% {
+            transform: translateX(0%);
+          }
+          100% {
+            transform: translateX(-50%);
+          }
+        }
+
+        /* Responsive Layout Overrides */
+        @media (max-width: 600px) {
+          .status-box {
+            top: 6px !important;
+            padding: 6px 8px !important;
+            width: calc(100% - 16px) !important;
+          }
+          .status-text {
+            font-size: 7px !important;
+          }
+          .search-input {
+            font-size: 8px !important;
+          }
+          .btn-ui {
+            font-size: 8px !important;
+            padding: 3px 5px !important;
+          }
+          .weather-hud {
+            top: auto !important;
+            bottom: 12px !important;
+            left: 8px !important;
+            padding: 4px 6px !important;
+            min-width: 100px !important;
+          }
+          .radar-hud {
+            bottom: 12px !important;
+            right: 8px !important;
+            width: 48px !important;
+            height: 48px !important;
+          }
+        }
+
+        @media (min-width: 601px) {
+          .status-box {
+            max-width: 580px !important;
+            padding: 8px 14px !important;
+            top: 10px !important;
+          }
+          .weather-hud {
+            top: 85px !important;
+            left: 12px !important;
+            padding: 8px 12px !important;
+            min-width: 180px !important;
+          }
+          .radar-hud {
+            bottom: 16px !important;
+            right: 16px !important;
+            width: 64px !important;
+            height: 64px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
@@ -645,16 +647,16 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    justify: 'space-between',
+    justifyContent: 'space-between',
     fontFamily: 'var(--font-pixel), monospace',
     overflow: 'hidden',
   },
   headerBar: {
     backgroundColor: '#0f2333',
-    border: '3px solid #00a8ff',
-    padding: '6px 12px',
-    borderRadius: '8px',
-    boxShadow: '0 3px 0 #000',
+    border: '2px solid #00a8ff',
+    padding: '4px 10px',
+    borderRadius: '6px',
+    boxShadow: '0 2px 0 #000',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -663,13 +665,13 @@ const styles = {
     boxSizing: 'border-box',
   },
   headerIcon: {
-    width: '20px',
-    height: '20px',
+    width: '18px',
+    height: '18px',
     objectFit: 'contain',
   },
   headerTitle: {
     color: '#e0f7fc',
-    fontSize: '12px',
+    fontSize: '11px',
     letterSpacing: '1px',
     textShadow: '1px 1px #000',
     whiteSpace: 'nowrap',
@@ -678,12 +680,12 @@ const styles = {
     position: 'relative',
     width: '100%',
     flex: 1,
-    margin: '6px 0',
-    border: '3px solid #1a3a52',
-    outline: '2px solid #00f0ff',
-    borderRadius: '8px',
+    margin: '4px 0',
+    border: '2px solid #1a3a52',
+    outline: '1px solid #00f0ff',
+    borderRadius: '6px',
     overflow: 'hidden',
-    boxShadow: 'inset 0 0 20px rgba(0,0,0,0.8), 0 4px 0 #000',
+    boxShadow: 'inset 0 0 20px rgba(0,0,0,0.8), 0 3px 0 #000',
   },
   statusBox: {
     position: 'absolute',
@@ -692,13 +694,13 @@ const styles = {
     transform: 'translateX(-50%)',
     zIndex: 1000,
     backgroundColor: 'rgba(13, 30, 45, 0.95)',
-    border: '2px solid #00f0ff',
+    border: '1.5px solid #00f0ff',
     padding: '6px 10px',
     textAlign: 'center',
-    borderRadius: '6px',
-    boxShadow: '0 4px 0 #000',
-    width: 'calc(100% - 24px)',
-    maxWidth: '420px',
+    borderRadius: '4px',
+    boxShadow: '0 3px 0 #000',
+    width: 'calc(100% - 20px)',
+    maxWidth: '460px',
     boxSizing: 'border-box',
   },
   statusText: {
@@ -714,12 +716,11 @@ const styles = {
     gap: '4px',
     alignItems: 'center',
     justifyContent: 'center',
-    flexWrap: 'wrap',
   },
   searchForm: {
     display: 'flex',
     gap: '4px',
-    flex: '1 1 auto',
+    flex: 1,
   },
   searchInput: {
     backgroundColor: '#050b10',
@@ -769,19 +770,15 @@ const styles = {
   },
   weatherHud: {
     position: 'absolute',
-    top: '70px',
-    left: '12px',
     zIndex: 1000,
     backgroundColor: 'rgba(5, 20, 35, 0.9)',
-    border: '2px solid #00f0ff',
-    borderRadius: '6px',
-    padding: '6px 8px',
-    boxShadow: '0 4px 0 #000',
+    border: '1.5px solid #00f0ff',
+    borderRadius: '4px',
+    boxShadow: '0 3px 0 #000',
     pointerEvents: 'none',
     display: 'flex',
     flexDirection: 'column',
     gap: '2px',
-    minWidth: '130px',
   },
   weatherHeader: {
     fontSize: '6px',
@@ -793,30 +790,24 @@ const styles = {
   weatherBody: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
-    marginTop: '2px',
+    gap: '6px',
+    marginTop: '1px',
   },
   weatherSubtext: {
     fontSize: '6px',
     color: '#00f0ff',
-    marginTop: '2px',
     letterSpacing: '0.5px',
   },
   radarHud: {
     position: 'absolute',
-    bottom: '12px',
-    right: '12px',
     zIndex: 1000,
-    width: '65px',
-    height: '65px',
     borderRadius: '50%',
-    border: '2px solid #00f0ff',
+    border: '1.5px solid #00f0ff',
     backgroundColor: 'rgba(5, 20, 35, 0.9)',
     display: 'flex',
-    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0 0 10px rgba(0, 240, 255, 0.4)',
+    boxShadow: '0 0 8px rgba(0, 240, 255, 0.3)',
     pointerEvents: 'none',
     overflow: 'hidden',
   },
@@ -839,7 +830,6 @@ const styles = {
   radarText: {
     fontSize: '5px',
     color: '#00f0ff',
-    marginTop: '1px',
     letterSpacing: '1px',
     zIndex: 2,
   },
@@ -856,8 +846,8 @@ const styles = {
   modalContent: {
     backgroundColor: '#0d1e2d',
     border: '2px solid #00f0ff',
-    padding: '14px',
-    borderRadius: '8px',
+    padding: '12px',
+    borderRadius: '6px',
     width: '100%',
     maxWidth: '280px',
     boxSizing: 'border-box',
@@ -868,7 +858,7 @@ const styles = {
     color: '#00f0ff',
     fontFamily: 'var(--font-pixel), monospace',
     fontSize: '9px',
-    padding: '6px',
+    padding: '5px',
     width: '100%',
     boxSizing: 'border-box',
   },
@@ -878,7 +868,7 @@ const styles = {
     border: 'none',
     fontSize: '8px',
     fontFamily: 'inherit',
-    padding: '6px 10px',
+    padding: '5px 8px',
     cursor: 'pointer',
   },
   submitBtn: {
@@ -887,22 +877,21 @@ const styles = {
     border: 'none',
     fontSize: '8px',
     fontFamily: 'inherit',
-    padding: '6px 10px',
+    padding: '5px 8px',
     cursor: 'pointer',
     fontWeight: 'bold',
   },
   bottomBar: {
     width: '100%',
     backgroundColor: '#050b10',
-    border: '2px solid #00a8ff',
-    borderRadius: '6px',
-    padding: '6px 0',
-    boxShadow: '0 3px 0 #000',
+    border: '1.5px solid #00a8ff',
+    borderRadius: '4px',
+    padding: '4px 0',
+    boxShadow: '0 2px 0 #000',
     boxSizing: 'border-box',
     overflow: 'hidden',
     display: 'flex',
     alignItems: 'center',
-    position: 'relative',
   },
   tickerTrack: {
     display: 'flex',
@@ -911,10 +900,10 @@ const styles = {
   },
   tickerText: {
     color: '#00f0ff',
-    fontSize: '10px',
+    fontSize: '9px',
     letterSpacing: '1px',
     whiteSpace: 'nowrap',
     fontFamily: 'var(--font-pixel), monospace',
-    paddingRight: '80px',
+    paddingRight: '60px',
   },
 };
