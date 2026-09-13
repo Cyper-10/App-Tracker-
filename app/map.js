@@ -326,15 +326,9 @@ export default function Map() {
               </button>
             </form>
 
-            <div style={styles.btnGroup}>
-              <button className="btn-ui" style={styles.homeBtn} onClick={handleJumpToDevice}>
-                GPS LOC
-              </button>
-
-              <button className="btn-ui" style={styles.actionBtn} onClick={() => setIsModalOpen(true)}>
-                + REPORT
-              </button>
-            </div>
+            <button className="btn-ui" style={styles.actionBtn} onClick={() => setIsModalOpen(true)}>
+              + REPORT
+            </button>
           </div>
         </div>
 
@@ -587,7 +581,7 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    justifyIn: 'space-between',
+    justifyContent: 'space-between',
     fontFamily: 'monospace',
     overflow: 'hidden',
   },
@@ -669,17 +663,6 @@ const styles = {
     backgroundColor: '#0f2333',
     color: '#00f0ff',
     border: '1px solid #00f0ff',
-    fontFamily: 'inherit',
-    fontSize: '8px',
-    padding: '4px 6px',
-    cursor: 'pointer',
-    whiteSpace: 'nowrap',
-  },
-  btnGroup: { display: 'flex', gap: '4px' },
-  homeBtn: {
-    backgroundColor: '#0f2333',
-    color: '#00f0ff',
-    border: '1px solid #00a8ff',
     fontFamily: 'inherit',
     fontSize: '8px',
     padding: '4px 6px',
