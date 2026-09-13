@@ -1,14 +1,11 @@
-'use client';
+// 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
-// ----------------------------------------------------
-// RETRO 8-BIT / PIXEL ART ICONS (Fixed Anchor Points)
-// ----------------------------------------------------
-
+// Retro 8-Bit Pixel Art Icons
 const liveDevice8BitIcon = new L.Icon({
   iconUrl: '/cypher.png',
   iconSize: [36, 36],
@@ -23,26 +20,38 @@ const cypher8BitIcon = new L.Icon({
   popupAnchor: [0, -18],
 });
 
-// Auto-follow component: smooth pan on device movement & target selection
-function MapAutoFollow({ coords, targetCoords, isAutoFollow }) {
+// Map Controller Component: Prevents camera loops and supports manual free-roam
+function MapController({ deviceCoords, targetCoords, isAutoFollow, setIsAutoFollow }) {
   const map = useMap();
 
+  // Instant camera unlock when user touches or drags the map
   useEffect(() => {
-    if (isAutoFollow && coords) {
-      map.panTo(coords, { animate: true, duration: 1 });
-    }
-  }, [coords, isAutoFollow, map]);
+    if (!map) return;
 
+    const unlockMap = () => {
+      if (isAutoFollow) setIsAutoFollow(false);
+    };
+
+    map.on('dragstart movestart touchstart zoomstart', unlockMap);
+    return () => {
+      map.off('dragstart movestart touchstart zoomstart', unlockMap);
+    };
+  }, [map, isAutoFollow, setIsAutoFollow]);
+
+  // Smoothly fly to target or center on device ONLY when explicitly triggered
   useEffect(() => {
+    if (!map) return;
     if (targetCoords) {
       map.flyTo(targetCoords, 16, { duration: 1.5 });
+    } else if (isAutoFollow && deviceCoords) {
+      map.flyTo(deviceCoords, 16, { animate: true, duration: 1 });
     }
-  }, [targetCoords, map]);
+  }, [isAutoFollow, targetCoords, map]);
 
   return null;
 }
 
-// Distance Helper (Haversine Formula in KM)
+// Haversine Distance Helper (KM)
 function calculateDistance(lat1, lon1, lat2, lon2) {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -90,7 +99,7 @@ export default function Map() {
     return { cond: 'ATMOSPHERIC DATA', icon: '🌐' };
   };
 
-  // 1. Precise Geolocation Watcher (Hardware First, IP Secondary)
+  // High-Precision Geolocation (Hardware First, IP Secondary Fallback)
   useEffect(() => {
     fetch('https://ipapi.co/json/')
       .then((res) => res.json())
@@ -100,6 +109,8 @@ export default function Map() {
       .catch((err) => console.warn('IP fetch error:', err));
 
     if (navigator.geolocation) {
+      const geoOptions = { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 };
+
       const watchId = navigator.geolocation.watchPosition(
         (pos) => {
           setDeviceCoords([pos.coords.latitude, pos.coords.longitude]);
@@ -107,7 +118,6 @@ export default function Map() {
           setIsGpsHardware(true);
         },
         async () => {
-          // Fallback only if browser GPS fails or user denies permissions
           setIsGpsHardware(false);
           try {
             const res = await fetch('https://ipapi.co/json/');
@@ -120,14 +130,14 @@ export default function Map() {
             console.warn(e);
           }
         },
-        { enableHighAccuracy: true, timeout: 30000, maximumAge: 5000 }
+        geoOptions
       );
 
       return () => navigator.geolocation.clearWatch(watchId);
     }
   }, []);
 
-  // 2. Cyber News Broadcasts
+  // News Telemetry
   useEffect(() => {
     async function fetchRealNews() {
       try {
@@ -145,7 +155,7 @@ export default function Map() {
     return () => clearInterval(interval);
   }, []);
 
-  // 3. Live Weather Telemetry
+  // Weather Data
   useEffect(() => {
     if (!deviceCoords) return;
     async function fetchTacticalWeather(lat, lng) {
@@ -170,7 +180,7 @@ export default function Map() {
     fetchTacticalWeather(deviceCoords[0], deviceCoords[1]);
   }, [deviceCoords]);
 
-  // 4. Road Route Geometry via OSRM
+  // Road Route Geometry via OSRM
   useEffect(() => {
     if (!deviceCoords || !targetCoords) {
       setRoutePath([]);
@@ -196,28 +206,19 @@ export default function Map() {
     fetchRoadRoute();
   }, [deviceCoords, targetCoords]);
 
-  // 5. Dynamic Search Handler
+  // Dynamic Search Handler
   const handleSearchLocation = async (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
 
     setIsSearching(true);
+    setIsAutoFollow(false);
     const query = searchQuery.trim();
 
     const coordMatch = query.match(/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/);
     if (coordMatch) {
       const lat = parseFloat(coordMatch[1]);
       const lng = parseFloat(coordMatch[3]);
-      const newPin = {
-        id: Date.now(),
-        type: 'TARGET PING',
-        lat,
-        lng,
-        location: `COORD (${lat.toFixed(2)}, ${lng.toFixed(2)})`,
-        note: 'Direct coordinate target locked',
-      };
-
-      setSightings((prev) => [...prev, newPin]);
       setTargetCoords([lat, lng]);
       setIsSearching(false);
       return;
@@ -228,24 +229,8 @@ export default function Map() {
       try {
         const res = await fetch(`https://ipapi.co/${query}/json/`);
         const data = await res.json();
-
         if (data && data.latitude && data.longitude) {
-          const lat = parseFloat(data.latitude);
-          const lng = parseFloat(data.longitude);
-          const city = data.city || 'Unknown';
-          const country = data.country_name || '';
-
-          const newPin = {
-            id: Date.now(),
-            type: `IP TARGET: ${query}`,
-            lat,
-            lng,
-            location: `${city}, ${country}`,
-            note: `ISP/ORG: ${data.org || 'Unknown ISP'}`,
-          };
-
-          setSightings((prev) => [...prev, newPin]);
-          setTargetCoords([lat, lng]);
+          setTargetCoords([parseFloat(data.latitude), parseFloat(data.longitude)]);
         } else {
           alert(`CYPHER NETWORK UNABLE TO LOCATE IP: ${query}`);
         }
@@ -261,21 +246,7 @@ export default function Map() {
       const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
       const data = await res.json();
       if (data && data.length > 0) {
-        const lat = parseFloat(data[0].lat);
-        const lng = parseFloat(data[0].lon);
-        const locName = data[0].display_name.split(',')[0];
-
-        const newPin = {
-          id: Date.now(),
-          type: 'SEARCHED INTEL',
-          lat,
-          lng,
-          location: locName,
-          note: 'Location located via search grid',
-        };
-
-        setSightings((prev) => [...prev, newPin]);
-        setTargetCoords([lat, lng]);
+        setTargetCoords([parseFloat(data[0].lat), parseFloat(data[0].lon)]);
       } else {
         alert('TARGET UNKNOWN TO CYPHER NETWORK');
       }
@@ -292,8 +263,8 @@ export default function Map() {
 
   const handleJumpToDevice = () => {
     if (deviceCoords) {
+      setTargetCoords(null);
       setIsAutoFollow(true);
-      setTargetCoords(deviceCoords);
     } else {
       alert('ACQUIRING GPS SIGNAL...');
     }
@@ -327,27 +298,13 @@ export default function Map() {
     <div className="outer-frame" style={styles.outerFrame}>
       {/* Top Banner Header */}
       <div className="header-bar" style={styles.headerBar}>
-        <img 
-          src="/cypher.png" 
-          alt="Cypher" 
-          className="header-icon"
-          style={styles.headerIcon} 
-          onError={(e) => { e.target.src = 'https://api.iconify.design/pixelarticons:user.svg?color=%2300f0ff'; }}
-        />
+        <img src="/cypher.png" alt="Cypher" className="header-icon" style={styles.headerIcon} />
         <div className="header-title" style={styles.headerTitle}>CYPHER TRACKER</div>
-        <img 
-          src="/cypher.png" 
-          alt="Cypher" 
-          className="header-icon"
-          style={styles.headerIcon} 
-          onError={(e) => { e.target.src = 'https://api.iconify.design/pixelarticons:user.svg?color=%2300f0ff'; }}
-        />
+        <img src="/cypher.png" alt="Cypher" className="header-icon" style={styles.headerIcon} />
       </div>
 
-      {/* Main Screen Container */}
+      {/* Main Map Frame */}
       <div style={styles.monitorContainer}>
-        <div className="crt-overlay"></div>
-
         {/* Floating Top Control Panel */}
         <div className="status-box" style={styles.statusBox}>
           <p className="status-text" style={styles.statusText}>
@@ -387,31 +344,41 @@ export default function Map() {
             ENV.INTEL // LIVE WX
           </div>
           <div className="weather-body" style={styles.weatherBody}>
-            <span className="weather-icon" style={{ fontSize: '18px' }}>
+            <span style={{ fontSize: '18px' }}>
               {weather ? getWeatherDetails(weather.code).icon : '🌐'}
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <strong className="weather-temp" style={{ color: '#00f0ff', fontSize: '13px' }}>
+              <strong style={{ color: '#00f0ff', fontSize: '13px' }}>
                 {weather ? `${weather.temp}°C` : 'SYNCING...'}
               </strong>
-              <span className="weather-cond" style={{ color: '#00a8ff', fontSize: '10px' }}>
+              <span style={{ color: '#00a8ff', fontSize: '10px' }}>
                 {weather ? getWeatherDetails(weather.code).cond : 'TELEMETRY'}
               </span>
             </div>
           </div>
-          <div className="weather-subtext" style={styles.weatherSubtext}>
+          <div style={styles.weatherSubtext}>
             {weather
               ? `WIND: ${weather.wind} KM/H | HUM: ${weather.humidity}%`
               : 'INITIALIZING MATRIX...'}
           </div>
         </div>
 
-        {/* Tactical Radar HUD */}
-        <div className="radar-hud" style={styles.radarHud}>
+        {/* Interactive RADAR HUD Button */}
+        <div
+          className="radar-hud"
+          onClick={handleJumpToDevice}
+          style={{
+            ...styles.radarHud,
+            cursor: 'pointer',
+            border: `1.5px solid ${isAutoFollow ? '#00ffff' : '#00a8ff'}`,
+            boxShadow: isAutoFollow ? '0 0 12px #00ffff' : '0 0 6px rgba(0,240,255,0.3)',
+          }}
+        >
           <div style={styles.radarGridHorizontal}></div>
           <div style={styles.radarGridVertical}></div>
-          <div className="radar-sweep-line"></div>
-          <span className="radar-text" style={styles.radarText}>RADAR</span>
+          <span className="radar-text" style={{ ...styles.radarText, color: isAutoFollow ? '#00ffff' : '#00a8ff' }}>
+            {isAutoFollow ? 'LOCKED' : 'RADAR'}
+          </span>
         </div>
 
         {/* Tactical Leaflet Map */}
@@ -428,18 +395,18 @@ export default function Map() {
         >
           <TileLayer
             attribution='&copy; CARTO'
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=cb1_3i1g_1_84bc385403b805786774790e"
+            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
             noWrap={true}
             bounds={outerWorldBounds}
           />
 
-          <MapAutoFollow
-            coords={deviceCoords}
+          <MapController
+            deviceCoords={deviceCoords}
             targetCoords={targetCoords}
             isAutoFollow={isAutoFollow}
+            setIsAutoFollow={setIsAutoFollow}
           />
 
-          {/* GPS Hardware Precision Accuracy Circle */}
           {deviceCoords && accuracyRadius && (
             <Circle
               center={deviceCoords}
@@ -454,11 +421,10 @@ export default function Map() {
             />
           )}
 
-          {/* Device Location Marker */}
           {deviceCoords && (
             <Marker position={deviceCoords} icon={liveDevice8BitIcon}>
               <Popup>
-                <div style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: '10px', color: '#111' }}>
+                <div style={{ fontFamily: 'monospace', fontSize: '10px', color: '#111' }}>
                   📡 <strong>BEACON ACTIVE</strong><br />
                   MODE: {isGpsHardware ? 'GPS HARDWARE' : 'IP NETWORK'}<br />
                   IP: {userIp}<br />
@@ -468,7 +434,6 @@ export default function Map() {
             </Marker>
           )}
 
-          {/* Road Path Geometry */}
           {routePath.length > 0 && (
             <Polyline
               positions={routePath}
@@ -479,7 +444,7 @@ export default function Map() {
           {sightings.map((s) => (
             <Marker key={s.id} position={[s.lat, s.lng]} icon={cypher8BitIcon}>
               <Popup>
-                <div style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: '10px', color: '#111', minWidth: '120px' }}>
+                <div style={{ fontFamily: 'monospace', fontSize: '10px', color: '#111', minWidth: '120px' }}>
                   <strong>[{s.type.toUpperCase()}] DETECTED</strong><br />
                   📍 {s.location}<br />
                   💬 <em>"{s.note}"</em>
@@ -507,6 +472,7 @@ export default function Map() {
           ))}
         </MapContainer>
 
+        {/* Modal Overlay for Adding Reports */}
         {isModalOpen && (
           <div style={styles.modalOverlay}>
             <div style={styles.modalContent}>
@@ -573,31 +539,19 @@ export default function Map() {
 
       <style jsx>{`
         @keyframes smoothTicker {
-          0% {
-            transform: translateX(0%);
-          }
-          100% {
-            transform: translateX(-50%);
-          }
+          0% { transform: translateX(0%); }
+          100% { transform: translateX(-50%); }
         }
 
-        /* Responsive Layout Overrides */
         @media (max-width: 600px) {
           .status-box {
             top: 6px !important;
             padding: 6px 8px !important;
             width: calc(100% - 16px) !important;
           }
-          .status-text {
-            font-size: 7px !important;
-          }
-          .search-input {
-            font-size: 8px !important;
-          }
-          .btn-ui {
-            font-size: 8px !important;
-            padding: 3px 5px !important;
-          }
+          .status-text { font-size: 7px !important; }
+          .search-input { font-size: 8px !important; }
+          .btn-ui { font-size: 8px !important; padding: 3px 5px !important; }
           .weather-hud {
             top: auto !important;
             bottom: 12px !important;
@@ -615,7 +569,7 @@ export default function Map() {
 
         @media (min-width: 601px) {
           .status-box {
-            max-width: 580px !important;
+            max-width: 520px !important;
             padding: 8px 14px !important;
             top: 10px !important;
           }
@@ -648,7 +602,7 @@ const styles = {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'space-between',
-    fontFamily: 'var(--font-pixel), monospace',
+    fontFamily: 'monospace',
     overflow: 'hidden',
   },
   headerBar: {
@@ -664,11 +618,7 @@ const styles = {
     maxWidth: '100%',
     boxSizing: 'border-box',
   },
-  headerIcon: {
-    width: '18px',
-    height: '18px',
-    objectFit: 'contain',
-  },
+  headerIcon: { width: '18px', height: '18px', objectFit: 'contain' },
   headerTitle: {
     color: '#e0f7fc',
     fontSize: '11px',
@@ -700,7 +650,7 @@ const styles = {
     borderRadius: '4px',
     boxShadow: '0 3px 0 #000',
     width: 'calc(100% - 20px)',
-    maxWidth: '460px',
+    maxWidth: '520px',
     boxSizing: 'border-box',
   },
   statusText: {
@@ -717,11 +667,7 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  searchForm: {
-    display: 'flex',
-    gap: '4px',
-    flex: 1,
-  },
+  searchForm: { display: 'flex', gap: '4px', flex: 1 },
   searchInput: {
     backgroundColor: '#050b10',
     border: '1px solid #00f0ff',
@@ -743,10 +689,7 @@ const styles = {
     cursor: 'pointer',
     whiteSpace: 'nowrap',
   },
-  btnGroup: {
-    display: 'flex',
-    gap: '4px',
-  },
+  btnGroup: { display: 'flex', gap: '4px' },
   homeBtn: {
     backgroundColor: '#0f2333',
     color: '#00f0ff',
@@ -802,13 +745,10 @@ const styles = {
     position: 'absolute',
     zIndex: 1000,
     borderRadius: '50%',
-    border: '1.5px solid #00f0ff',
     backgroundColor: 'rgba(5, 20, 35, 0.9)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0 0 8px rgba(0, 240, 255, 0.3)',
-    pointerEvents: 'none',
     overflow: 'hidden',
   },
   radarGridHorizontal: {
@@ -828,10 +768,10 @@ const styles = {
     backgroundColor: 'rgba(0, 240, 255, 0.25)',
   },
   radarText: {
-    fontSize: '5px',
-    color: '#00f0ff',
+    fontSize: '7px',
     letterSpacing: '1px',
     zIndex: 2,
+    fontWeight: 'bold',
   },
   modalOverlay: {
     position: 'absolute',
@@ -856,7 +796,7 @@ const styles = {
     backgroundColor: '#050b10',
     border: '1px solid #00a8ff',
     color: '#00f0ff',
-    fontFamily: 'var(--font-pixel), monospace',
+    fontFamily: 'monospace',
     fontSize: '9px',
     padding: '5px',
     width: '100%',
@@ -903,9 +843,7 @@ const styles = {
     fontSize: '9px',
     letterSpacing: '1px',
     whiteSpace: 'nowrap',
-    fontFamily: 'var(--font-pixel), monospace',
+    fontFamily: 'monospace',
     paddingRight: '60px',
   },
 };
-
-
