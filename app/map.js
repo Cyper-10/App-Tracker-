@@ -1,4 +1,4 @@
-// 'use client';
+'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap } from 'react-leaflet';
@@ -395,7 +395,7 @@ export default function Map() {
         >
           <TileLayer
             attribution='&copy; CARTO'
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=cb1_3i1g_1_84bc385403b805786774790e"
             noWrap={true}
             bounds={outerWorldBounds}
           />
